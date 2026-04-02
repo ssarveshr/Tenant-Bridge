@@ -1,0 +1,438 @@
+import React from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  SafeAreaView,
+  StatusBar,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { Colors, Spacing, Radius } from "../../constants/Theme";
+import Animated, { FadeInUp, FadeInRight } from "react-native-reanimated";
+
+export default function OwnerHomeScreen() {
+  const router = useRouter();
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" />
+      
+      {/* Header with Portfolio Selector */}
+      <View style={styles.header}>
+        <View>
+          <Text style={styles.portfolioLabel}>Portfolio Overview</Text>
+          <View style={styles.portfolioSelector}>
+            <Text style={styles.portfolioName}>My Real Estate</Text>
+            <Ionicons name="chevron-down" size={16} color={Colors.textPrimary} style={{ marginLeft: 6 }} />
+          </View>
+        </View>
+        <TouchableOpacity activeOpacity={0.8}>
+          <View style={styles.avatar}>
+            <Ionicons name="business" size={24} color={Colors.accent} />
+          </View>
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        {/* Collection Status Card */}
+        <Animated.View 
+          entering={FadeInUp.delay(100).duration(500)}
+          style={styles.collectionCard}
+        >
+          <View style={styles.collectionInfo}>
+            <Text style={styles.collectionLabel}>Rent Collection • March</Text>
+            <Text style={styles.collectionValue}>₹48,500 / ₹50,000</Text>
+            <View style={styles.progressBarContainer}>
+              <View style={[styles.progressBar, { width: "97%" }]} />
+            </View>
+            <Text style={styles.progressDetail}>97% Collected • 1 Pending</Text>
+          </View>
+          <TouchableOpacity style={styles.detailsBtn}>
+            <Ionicons name="arrow-forward" size={20} color={Colors.white} />
+          </TouchableOpacity>
+        </Animated.View>
+
+        {/* Action Needed Section */}
+        <Text style={styles.sectionTitle}>Requires Attention</Text>
+        <Animated.View 
+          entering={FadeInUp.delay(200).duration(500)}
+          style={styles.attentionCard}
+        >
+          <View style={styles.attentionLeft}>
+            <View style={styles.attentionIconCircle}>
+              <Ionicons name="alert-circle" size={24} color={Colors.warning} />
+            </View>
+            <View>
+              <Text style={styles.attentionTitle}>1 Offline Receipt Uploaded</Text>
+              <Text style={styles.attentionDesc}>Verify ₹25,000 payment from John Doe</Text>
+            </View>
+          </View>
+          <TouchableOpacity 
+            style={styles.verifyBtn}
+            onPress={() => router.push("/owner/verify-payment" as any)}
+          >
+            <Text style={styles.verifyBtnText}>Verify</Text>
+          </TouchableOpacity>
+        </Animated.View>
+
+        {/* Properties Section */}
+        <View style={styles.propertiesHeader}>
+          <Text style={styles.sectionTitle}>My Properties</Text>
+          <TouchableOpacity>
+            <Text style={styles.manageBtn}>Manage All</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.propertyGrid}>
+          <PropertyMiniCard 
+            name="Sunshine Apartments"
+            unit="Flat 402"
+            tenant="John Doe"
+            status="Paid"
+            statusColor={Colors.success}
+            delay={300}
+          />
+          <PropertyMiniCard 
+            name="Green Valley Flats"
+            unit="Villa 9"
+            tenant="Sarah Smith"
+            status="Overdue"
+            statusColor={Colors.danger}
+            delay={400}
+          />
+        </View>
+
+        {/* Portfolio Stats & Reputation */}
+        <Text style={styles.sectionTitle}>Portfolio Stats</Text>
+        <View style={styles.statsGrid}>
+          <StatCard label="Active Leases" value="2" icon="documents-outline" delay={500} />
+          <TouchableOpacity 
+            style={{ flex: 1 }} 
+            onPress={() => router.push("/credit-score" as any)}
+            activeOpacity={0.8}
+          >
+            <StatCard 
+              label="Owner Score" 
+              value="100/100" 
+              icon="star-outline" 
+              delay={600} 
+              color={Colors.accent} 
+            />
+          </TouchableOpacity>
+        </View>
+
+        <View style={{ height: 100 }} />
+      </ScrollView>
+
+      {/* FAB - Add Property */}
+      <TouchableOpacity 
+        style={styles.fab} 
+        activeOpacity={0.9}
+        onPress={() => router.push("/owner/add-property" as any)}
+      >
+        <Ionicons name="add" size={32} color={Colors.white} />
+      </TouchableOpacity>
+    </SafeAreaView>
+  );
+}
+
+function PropertyMiniCard({ name, unit, tenant, status, statusColor, delay }: any) {
+  const router = useRouter();
+  return (
+    <Animated.View 
+      entering={FadeInUp.delay(delay).duration(500)}
+      style={styles.pCard}
+    >
+      <View style={styles.pCardHeader}>
+        <Text style={styles.pBadge}>{status}</Text>
+        <Text style={[styles.pStatus, { color: statusColor }]}>• {unit}</Text>
+      </View>
+      <Text style={styles.pName}>{name}</Text>
+      <Text style={styles.pTenant}>Tenant: {tenant}</Text>
+      <TouchableOpacity 
+        style={styles.pFooter}
+        onPress={() => router.push("/owner/manage/(tabs)/home" as any)}
+      >
+        <Text style={styles.pLink}>Manage Property</Text>
+        <Ionicons name="chevron-forward" size={14} color={Colors.accent} />
+      </TouchableOpacity>
+    </Animated.View>
+  );
+}
+
+function StatCard({ label, value, icon, delay }: any) {
+  return (
+    <Animated.View 
+      entering={FadeInRight.delay(delay).duration(500)}
+      style={styles.sCard}
+    >
+      <Ionicons name={icon} size={20} color={Colors.textSecondary} />
+      <Text style={styles.sValue}>{value}</Text>
+      <Text style={styles.sLabel}>{label}</Text>
+    </Animated.View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.m,
+    paddingBottom: Spacing.l,
+    backgroundColor: Colors.background,
+  },
+  portfolioLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: Colors.textSecondary,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  portfolioSelector: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  portfolioName: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: Colors.textPrimary,
+  },
+  avatar: {
+    width: 44,
+    height: 44,
+    borderRadius: Radius.full,
+    backgroundColor: Colors.white,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  scrollContent: {
+    padding: Spacing.xl,
+  },
+  collectionCard: {
+    backgroundColor: Colors.accent,
+    borderRadius: Radius.m,
+    padding: Spacing.xl,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: Spacing.xxl,
+    shadowColor: Colors.accent,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.2,
+    shadowRadius: 20,
+    elevation: 8,
+  },
+  collectionInfo: {
+    flex: 1,
+  },
+  collectionLabel: {
+    color: Colors.white,
+    fontSize: 13,
+    fontWeight: "600",
+    opacity: 0.8,
+    marginBottom: 6,
+  },
+  collectionValue: {
+    color: Colors.white,
+    fontSize: 24,
+    fontWeight: "800",
+    marginBottom: 16,
+  },
+  progressBarContainer: {
+    height: 6,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    borderRadius: 3,
+    marginBottom: 8,
+    width: "90%",
+  },
+  progressBar: {
+    height: "100%",
+    backgroundColor: Colors.white,
+    borderRadius: 3,
+  },
+  progressDetail: {
+    color: Colors.white,
+    fontSize: 12,
+    fontWeight: "600",
+    opacity: 0.9,
+  },
+  detailsBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: Colors.textPrimary,
+    marginBottom: Spacing.m,
+  },
+  attentionCard: {
+    backgroundColor: Colors.white,
+    borderRadius: Radius.m,
+    padding: Spacing.m,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: Spacing.xxl,
+  },
+  attentionLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  attentionIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#FFF7ED",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  attentionTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: Colors.textPrimary,
+    marginBottom: 2,
+  },
+  attentionDesc: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    fontWeight: "500",
+  },
+  verifyBtn: {
+    backgroundColor: Colors.textPrimary,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  verifyBtnText: {
+    color: Colors.white,
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  propertiesHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: Spacing.m,
+  },
+  manageBtn: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: Colors.accent,
+  },
+  propertyGrid: {
+    gap: Spacing.m,
+    marginBottom: Spacing.xxl,
+  },
+  pCard: {
+    backgroundColor: Colors.white,
+    borderRadius: Radius.m,
+    padding: Spacing.m,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  pCardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
+  pBadge: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: Colors.textSecondary,
+    textTransform: "uppercase",
+    backgroundColor: "#F1F5F9",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  pStatus: {
+    fontSize: 11,
+    fontWeight: "800",
+  },
+  pName: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: Colors.textPrimary,
+    marginBottom: 2,
+  },
+  pTenant: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    marginBottom: 12,
+  },
+  pFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+    paddingTop: 10,
+  },
+  pLink: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: Colors.accent,
+    marginRight: 4,
+  },
+  statsGrid: {
+    flexDirection: "row",
+    gap: Spacing.m,
+  },
+  sCard: {
+    flex: 1,
+    backgroundColor: Colors.white,
+    borderRadius: Radius.m,
+    padding: Spacing.m,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  sValue: {
+    fontSize: 24,
+    fontWeight: "800",
+    color: Colors.textPrimary,
+    marginVertical: 4,
+  },
+  sLabel: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    fontWeight: "600",
+  },
+  fab: {
+    position: "absolute",
+    bottom: 30,
+    right: 24,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: Colors.accent,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: Colors.accent,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 15,
+    elevation: 8,
+  },
+});
