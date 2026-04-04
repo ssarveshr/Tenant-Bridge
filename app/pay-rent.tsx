@@ -4,11 +4,11 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
   StatusBar,
   ActivityIndicator,
   Alert,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { Colors, Spacing, Radius } from "../constants/Theme";
@@ -26,7 +26,7 @@ const RAZORPAY_KEY_ID = process.env.EXPO_PUBLIC_RAZORPAY_KEY_ID || "YOUR_TEST_KE
 export default function PayRentScreen() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
-  const paymentAmount = 25020; // Example dynamic rent outstanding amount
+  const paymentAmount = 5000; // Example dynamic rent outstanding amount
 
   const handleOnlinePayment = async () => {
     setIsLoading(true);
@@ -76,8 +76,14 @@ export default function PayRentScreen() {
             });
 
             if (verifyResp.data.verified) {
-              Alert.alert("Success!", "Rent payment of ₹" + paymentAmount + " was successful and verified.");
-              // router.replace("/(tabs)/transactions") // Or navigate away
+              // Navigate to dedicated success screen with blockchain hash
+              router.push({
+                pathname: "/payment-success",
+                params: { 
+                  amount: paymentAmount, 
+                  txHash: verifyResp.data.blockchain_hash 
+                }
+              });
             }
           } catch (error: any) {
             console.error("Verification failed:", error);
@@ -100,7 +106,7 @@ export default function PayRentScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
       <StatusBar barStyle="dark-content" />
       
       <View style={styles.header}>
@@ -114,8 +120,8 @@ export default function PayRentScreen() {
       <View style={styles.content}>
         <View style={styles.amountContainer}>
           <Text style={styles.amountLabel}>Rent Outstanding</Text>
-          <Text style={styles.amountValue}>₹25,020</Text>
-          <Text style={styles.feeBreakdown}>₹25,000 Rent + ₹20 Platform Fee</Text>
+          <Text style={styles.amountValue}>₹5,000</Text>
+          <Text style={styles.feeBreakdown}>₹4,950 Rent + ₹50 Platform Fee</Text>
         </View>
 
         <Text style={styles.sectionTitle}>Select Payment Method</Text>
@@ -159,7 +165,7 @@ export default function PayRentScreen() {
         <View style={styles.payoutPolicy}>
           <Ionicons name="shield-checkmark-outline" size={20} color={Colors.textSecondary} />
           <Text style={styles.payoutPolicyText}>
-            All transactions are recorded on the Polygon blockchain for immutable proof.
+            All transactions are recorded on the Ethereum blockchain for immutable proof.
           </Text>
         </View>
       </View>
