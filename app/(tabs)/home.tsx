@@ -14,10 +14,27 @@ import { useRouter } from "expo-router";
 import { Colors, Spacing, Radius } from "../../constants/Theme";
 import Animated, { FadeInUp, FadeInRight } from "react-native-reanimated";
 import { useLanguage } from "../../hooks/useLanguage";
+import { getDisputes } from "../../store/disputeStore";
+import { usePropertyStore } from "../../store/propertyStore";
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { t } = useLanguage();
+  const { t, n } = useLanguage();
+  const myLease = usePropertyStore((state) => state.getMyLease());
+
+  if (!myLease) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.emptyState}>
+          <Ionicons name="home-outline" size={64} color={Colors.border} />
+          <Text style={styles.emptyText}>No Active Rental Agreement</Text>
+          <TouchableOpacity onPress={() => router.replace("/role-selection" as any)}>
+            <Text style={styles.switchText}>Switch to Owner Mode</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -28,7 +45,7 @@ export default function HomeScreen() {
         <View>
           <Text style={styles.propertyLabel}>{t('propertyWorkspace')}</Text>
           <View style={styles.propertySelector}>
-            <Text style={styles.propertyName}>Sunshine Apartments</Text>
+            <Text style={styles.propertyName}>{myLease.name}</Text>
             <Ionicons name="chevron-down" size={16} color={Colors.textPrimary} style={{ marginLeft: 6 }} />
           </View>
         </View>
@@ -46,11 +63,11 @@ export default function HomeScreen() {
           <View style={styles.statusRow}>
             <View>
               <Text style={styles.rentLabel}>{t('monthlyRent')}</Text>
-              <Text style={styles.rentValue}>₹25,000</Text>
+              <Text style={styles.rentValue}>₹{n(parseInt(myLease.rent).toLocaleString())}</Text>
             </View>
             <View style={styles.dueBadge}>
               <Text style={styles.dueLabel}>{t('nextDue')}</Text>
-              <Text style={styles.dueDate}>April 5, 2026</Text>
+              <Text style={styles.dueDate}>{myLease.dueDate}</Text>
             </View>
           </View>
         </Animated.View>
@@ -67,9 +84,12 @@ export default function HomeScreen() {
           <DashboardCard 
             icon="alert-circle-outline" 
             label={t('disputes')} 
-            value="None Active" 
+            value={getDisputes().filter(d => d.status !== 'Resolved').length > 0 
+              ? `${getDisputes().filter(d => d.status !== 'Resolved').length} Active` 
+              : t('noActiveDisputes')} 
             delay={300}
             color="#EF4444"
+            onPress={() => router.push("/(tabs)/disputes" as any)}
           />
           <DashboardCard 
             icon="document-text-outline" 
@@ -99,9 +119,9 @@ export default function HomeScreen() {
 
         <View style={styles.activityList}>
           <ActivityItem 
-            title="Rent Paid - March" 
+            title={`Rent Paid - ${new Date().toLocaleString('default', { month: 'long' })}`} 
             date="Mar 5, 2026" 
-            amount="₹25,000"
+            amount={`₹${parseInt(myLease.rent).toLocaleString()}`}
             status="success"
             delay={600}
           />
@@ -120,7 +140,13 @@ export default function HomeScreen() {
         <TouchableOpacity 
           style={styles.payBtn} 
           activeOpacity={0.9}
-          onPress={() => router.push("/pay-rent" as any)}
+          onPress={() => router.push({
+            pathname: "/online-payment",
+            params: { 
+              amount: myLease.rent,
+              propertyName: myLease.name
+            }
+          } as any)}
         >
           <Ionicons name="wallet-outline" size={24} color={Colors.white} />
           <Text style={styles.payBtnText}>{t('payRent')}</Text>
@@ -377,5 +403,25 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
     marginLeft: 12,
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 40,
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: Colors.textPrimary,
+    marginTop: 16,
+    textAlign: "center",
+  },
+  switchText: {
+    fontSize: 14,
+    color: Colors.accent,
+    fontWeight: "700",
+    marginTop: 12,
+    textDecorationLine: "underline",
   },
 });

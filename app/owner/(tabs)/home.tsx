@@ -11,9 +11,9 @@ import {
   View,
 } from "react-native";
 import Animated, { FadeInRight, FadeInUp } from "react-native-reanimated";
-import { Colors, Radius, Spacing } from "../../constants/Theme";
-import { useLanguage } from "../../hooks/useLanguage";
-import { usePropertyStore } from "../../store/propertyStore";
+import { Colors, Radius, Spacing } from "../../../constants/Theme";
+import { useLanguage } from "../../../hooks/useLanguage";
+import { usePropertyStore } from "../../../store/propertyStore";
 
 export default function OwnerHomeScreen() {
   const router = useRouter();
@@ -144,6 +144,7 @@ export default function OwnerHomeScreen() {
               statusColor={prop.status === 'Received' ? Colors.success : prop.status === 'Overdue' ? Colors.danger : Colors.warning}
               delay={300 + index * 100}
               t={t}
+              router={router}
             />
           ))}
         </View>
@@ -182,8 +183,7 @@ export default function OwnerHomeScreen() {
   );
 }
 
-function PropertyMiniCard({ id, name, unit, tenant, status, statusColor, delay, t }: any) {
-  const router = useRouter();
+function PropertyMiniCard({ id, name, unit, tenant, status, statusColor, delay, t, router }: any) {
   return (
     <Animated.View
       entering={FadeInUp.delay(delay).duration(500)}

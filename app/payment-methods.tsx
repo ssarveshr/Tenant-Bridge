@@ -8,13 +8,12 @@ import {
   SafeAreaView,
   StatusBar,
 } from "react-native";
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { Colors, Spacing, Radius } from "../constants/Theme";
 import Animated, { FadeInUp } from "react-native-reanimated";
 
 export default function PaymentMethodsScreen() {
-  const router = useRouter();
 
   return (
     <SafeAreaView style={styles.container}>

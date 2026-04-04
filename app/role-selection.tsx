@@ -22,7 +22,7 @@ export default function RoleSelection() {
     if (role === "tenant") {
       router.push("/(tabs)/home" as any);
     } else {
-      router.push("/owner/home" as any);
+      router.push("/owner/(tabs)/home" as any);
     }
   };
 

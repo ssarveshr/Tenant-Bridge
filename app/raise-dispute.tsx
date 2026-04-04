@@ -10,17 +10,66 @@ import {
   StatusBar,
   KeyboardAvoidingView,
   Platform,
+  Image,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from "expo-router";
 import { Colors, Spacing, Radius } from "../constants/Theme";
 import Animated, { FadeInUp } from "react-native-reanimated";
 import { useLanguage } from "../hooks/useLanguage";
+import { addDispute, setActiveProcessingId } from "../store/disputeStore";
 
 export default function RaiseDisputeScreen() {
   const router = useRouter();
   const { t } = useLanguage();
   const [category, setCategory] = useState("Maintenance");
+  const [desc, setDesc] = useState("");
+  const [imageUri, setImageUri] = useState<string | null>(null);
+  const [base64Image, setBase64Image] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const pickImage = async () => {
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      quality: 0.5,
+      base64: true,
+    });
+
+    if (!result.canceled) {
+      setImageUri(result.assets[0].uri);
+      setBase64Image(result.assets[0].base64 || null);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!desc.trim()) return;
+    setIsSubmitting(true);
+    
+    // Register in store and trigger processing
+    const newDispute = addDispute({
+      title: (category === "Maintenance" ? "Maintenance" : category) + " Issue",
+      description: desc,
+      category,
+      imageUri: imageUri || undefined,
+    });
+    
+    setActiveProcessingId(newDispute.id);
+    
+    // Navigate to processing screen
+    router.push({
+      pathname: "/ai-processing",
+      params: { 
+        description: desc, 
+        imageBase64: base64Image || "", 
+        category 
+      }
+    } as any);
+
+    setIsSubmitting(false);
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -76,12 +125,27 @@ export default function RaiseDisputeScreen() {
               placeholderTextColor={Colors.textSecondary}
               multiline
               numberOfLines={4}
+              value={desc}
+              onChangeText={setDesc}
+              editable={!isSubmitting}
             />
 
-            <TouchableOpacity style={styles.uploadBtn}>
-              <Ionicons name="camera-outline" size={24} color={Colors.accent} />
-              <Text style={styles.uploadBtnText}>Upload Evidence (Photos/Videos)</Text>
-            </TouchableOpacity>
+            {imageUri ? (
+              <View style={styles.imagePreviewContainer}>
+                <Image source={{ uri: imageUri }} style={styles.imagePreview} />
+                <TouchableOpacity style={styles.removeImageBtn} onPress={() => {
+                  setImageUri(null);
+                  setBase64Image(null);
+                }}>
+                  <Ionicons name="close-circle" size={24} color="#DC2626" />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity style={styles.uploadBtn} onPress={pickImage} disabled={isSubmitting}>
+                <Ionicons name="camera-outline" size={24} color={Colors.accent} />
+                <Text style={styles.uploadBtnText}>Upload Evidence (Photos/Videos)</Text>
+              </TouchableOpacity>
+            )}
 
             <View style={styles.aiNotice}>
               <Ionicons name="sparkles-outline" size={20} color={Colors.accent} />
@@ -91,10 +155,15 @@ export default function RaiseDisputeScreen() {
             </View>
 
             <TouchableOpacity 
-              style={styles.primaryBtn}
-              onPress={() => router.push("/dispute-verdict" as any)}
+              style={[styles.primaryBtn, isSubmitting && styles.primaryBtnDisabled]}
+              onPress={handleSubmit}
+              disabled={isSubmitting}
             >
-              <Text style={styles.primaryBtnText}>Submit for AI Review</Text>
+              {isSubmitting ? (
+                <ActivityIndicator color={Colors.white} />
+              ) : (
+                <Text style={styles.primaryBtnText}>Submit for AI Review</Text>
+              )}
             </TouchableOpacity>
           </Animated.View>
 
@@ -208,6 +277,24 @@ const styles = StyleSheet.create({
     color: Colors.accent,
     marginTop: 8,
   },
+  imagePreviewContainer: {
+    marginTop: 24,
+    position: "relative",
+    borderRadius: Radius.m,
+    overflow: "hidden",
+  },
+  imagePreview: {
+    width: "100%",
+    height: 150,
+    borderRadius: Radius.m,
+  },
+  removeImageBtn: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    backgroundColor: "rgba(255,255,255,0.8)",
+    borderRadius: 12,
+  },
   aiNotice: {
     flexDirection: "row",
     backgroundColor: "#F8FAFC",
@@ -241,5 +328,10 @@ const styles = StyleSheet.create({
     color: Colors.white,
     fontSize: 16,
     fontWeight: "bold",
+  },
+  primaryBtnDisabled: {
+    backgroundColor: Colors.border,
+    shadowOpacity: 0,
+    elevation: 0,
   },
 });

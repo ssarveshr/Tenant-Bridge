@@ -156,7 +156,7 @@ export default function LoginScreen() {
                     maxLength={10}
                   />
                 </View>
-                <Text style={styles.helperText}>We'll send a 6-digit code to your phone.</Text>
+                <Text style={styles.helperText}>We{"'"}ll send a 6-digit code to your phone.</Text>
               </View>
             )}
 

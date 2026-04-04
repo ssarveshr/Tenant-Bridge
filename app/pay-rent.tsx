@@ -10,10 +10,15 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { Colors, Spacing, Radius } from "../constants/Theme";
-import Animated, { FadeInUp } from "react-native-reanimated";
+import { usePropertyStore } from "../store/propertyStore";
 
 export default function PayRentScreen() {
   const router = useRouter();
+  const myLease = usePropertyStore((state) => state.getMyLease());
+
+  if (!myLease) return null;
+  const amount = parseInt(myLease.rent);
+  const total = amount + 20;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -28,8 +33,8 @@ export default function PayRentScreen() {
       <View style={styles.content}>
         <View style={styles.amountContainer}>
           <Text style={styles.amountLabel}>Rent Outstanding</Text>
-          <Text style={styles.amountValue}>₹25,020</Text>
-          <Text style={styles.feeBreakdown}>₹25,000 Rent + ₹20 Platform Fee</Text>
+          <Text style={styles.amountValue}>₹{total.toLocaleString()}</Text>
+          <Text style={styles.feeBreakdown}>₹{amount.toLocaleString()} Rent + ₹20 Platform Fee</Text>
         </View>
 
         <Text style={styles.sectionTitle}>Select Payment Method</Text>
@@ -37,7 +42,13 @@ export default function PayRentScreen() {
         <TouchableOpacity 
           style={styles.methodCard} 
           activeOpacity={0.8}
-          onPress={() => router.push("/online-payment" as any)}
+          onPress={() => router.push({
+            pathname: "/online-payment",
+            params: { 
+              amount: myLease.rent,
+              propertyName: myLease.name
+            }
+          } as any)}
         >
           <View style={styles.iconBox}>
             <Ionicons name="card-outline" size={28} color={Colors.accent} />

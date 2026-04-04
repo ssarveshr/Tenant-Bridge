@@ -1,21 +1,24 @@
-import React, { useState, useEffect } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  SafeAreaView,
-  StatusBar,
-  ScrollView,
-  Alert,
-} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import { Colors, Spacing, Radius } from "../constants/Theme";
-import Animated, { FadeInUp, FadeIn } from "react-native-reanimated";
+import { useRouter, useLocalSearchParams } from "expo-router";
+import React, { useState } from "react";
+import {
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
+} from "react-native";
+import Animated, { FadeIn, FadeInUp } from "react-native-reanimated";
+import { Colors, Radius, Spacing } from "../constants/Theme";
 
 export default function OnlinePaymentScreen() {
   const router = useRouter();
+  const { amount: paramAmount, propertyName } = useLocalSearchParams();
+  const amount = parseInt(paramAmount as string) || 25000;
+  const total = amount + 20;
+
   const [step, setStep] = useState(1); // 1: Select UPI/Card, 2: Loading, 3: Success
 
   const handlePay = () => {
@@ -37,7 +40,7 @@ export default function OnlinePaymentScreen() {
         <View style={styles.loadingArea}>
           <Ionicons name="shield-checkmark" size={64} color={Colors.accent} />
           <Text style={styles.loadingText}>Razorpay Gateway Terminal Active</Text>
-          <Text style={styles.loadingSub}>Verifying ₹25,020 with the Polygon network...</Text>
+          <Text style={styles.loadingSub}>Verifying ₹{total.toLocaleString()} for {propertyName || "Sunshine Apartments"} with the Polygon network...</Text>
         </View>
       </SafeAreaView>
     );
@@ -60,14 +63,14 @@ export default function OnlinePaymentScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
-      
+
       <View style={styles.header}>
         <View style={{ width: 28 }} />
         <Text style={styles.headerTitle}>Online Payment</Text>
         <View style={{ width: 28 }} />
       </View>
 
-      <ScrollView 
+      <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
@@ -84,14 +87,14 @@ export default function OnlinePaymentScreen() {
           </View>
 
           <View style={styles.summaryBox}>
-            <SummaryRow label="Rent Amount" value="₹25,000" />
+            <SummaryRow label="Rent Amount" value={`₹${amount.toLocaleString()}`} />
             <SummaryRow label="Platform Fee" value="₹20" />
             <View style={styles.divider} />
-            <SummaryRow label="Total Payable" value="₹25,020" isTotal />
+            <SummaryRow label="Total Payable" value={`₹${total.toLocaleString()}`} isTotal />
           </View>
 
           <TouchableOpacity style={styles.primaryBtn} onPress={handlePay}>
-            <Text style={styles.primaryBtnText}>Pay ₹25,020 Now</Text>
+            <Text style={styles.primaryBtnText}>Pay ₹{total.toLocaleString()} Now</Text>
           </TouchableOpacity>
         </Animated.View>
       </ScrollView>

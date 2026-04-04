@@ -143,18 +143,6 @@ export default function UploadAgreementScreen() {
   );
 }
 
-function AdvantageItem({ icon, title, desc }: any) {
-  return (
-    <View style={styles.advItem}>
-      <Ionicons name={icon} size={24} color={Colors.accent} />
-      <View style={styles.advContent}>
-        <Text style={styles.advTitle}>{title}</Text>
-        <Text style={styles.advDesc}>{desc}</Text>
-      </View>
-    </View>
-  );
-}
-
 function SummaryRow({ label, value }: any) {
   return (
     <View style={styles.summaryRow}>

@@ -10,13 +10,15 @@ import {
   StatusBar,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
 import { Colors, Spacing, Radius } from "../constants/Theme";
-import Animated, { FadeIn, FadeInUp } from "react-native-reanimated";
+import Animated, { FadeIn } from "react-native-reanimated";
+import { usePropertyStore } from "../store/propertyStore";
 
 export default function WorkspaceScreen() {
-  const router = useRouter();
+  const myLease = usePropertyStore((state) => state.getMyLease());
   const [activeTab, setActiveTab] = useState("agreement");
+
+  if (!myLease) return null;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -26,8 +28,8 @@ export default function WorkspaceScreen() {
       <View style={styles.header}>
         <View style={{ width: 24 }} />
         <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle}>Sunshine Apartments</Text>
-          <Text style={styles.headerSubtitle}>Flat 402 • Workspace</Text>
+          <Text style={styles.headerTitle}>{myLease.name}</Text>
+          <Text style={styles.headerSubtitle}>{myLease.unit} • Workspace</Text>
         </View>
         <TouchableOpacity>
           <Ionicons name="people-outline" size={24} color={Colors.textPrimary} />
@@ -72,7 +74,7 @@ export default function WorkspaceScreen() {
                 {"\n\n"}
                 <Text style={styles.highlight}>Clause 4.1: Monthly Rent Payment</Text>
                 {"\n"}
-                The Tenant shall pay a monthly rent of ₹25,000 on or before the 5th of every month.
+                The Tenant shall pay a monthly rent of ₹{parseInt(myLease.rent).toLocaleString()} on or before the {myLease.dueDate} of every month.
                 {"\n\n"}
                 <Text style={styles.highlight}>Clause 7.2: Maintenance Responsibilities</Text>
                 {"\n"}
@@ -82,9 +84,9 @@ export default function WorkspaceScreen() {
 
             <Text style={styles.aiLabel}>AI Extracted Intelligence</Text>
             <View style={styles.aiGrid}>
-              <AiCard label="Rent Amount" value="₹25,000 / mo" icon="cash-outline" />
-              <AiCard label="Due Date" value="Every 5th" icon="calendar-outline" />
-              <AiCard label="Security" value="₹75,000" icon="shield-outline" />
+              <AiCard label="Rent Amount" value={`₹${parseInt(myLease.rent).toLocaleString()} / mo`} icon="cash-outline" />
+              <AiCard label="Due Date" value={myLease.dueDate} icon="calendar-outline" />
+              <AiCard label="Security" value={`₹${parseInt(myLease.deposit).toLocaleString()}`} icon="shield-outline" />
               <AiCard label="Policy" value="Standard" icon="reader-outline" />
             </View>
           </Animated.View>

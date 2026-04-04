@@ -12,9 +12,17 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { Colors, Spacing, Radius } from "../../../../constants/Theme";
 import Animated, { FadeInDown } from "react-native-reanimated";
+import { useLocalSearchParams } from "expo-router";
+import { getDisputes } from "../../../../store/disputeStore";
 
 export default function OwnerManageDisputesScreen() {
   const router = useRouter();
+  const { id } = useLocalSearchParams();
+  const allDisputes = getDisputes();
+  
+  // In a real app we'd filter by property ID. For now we show all as unit-relevant.
+  const activeDisputes = allDisputes.filter(d => d.status === 'Pending');
+  const resolvedDisputes = allDisputes.filter(d => d.status === 'Resolved' || d.status === 'Escalated');
 
   return (
     <SafeAreaView style={styles.container}>
@@ -24,33 +32,43 @@ export default function OwnerManageDisputesScreen() {
         <Text style={styles.headerTitle}>Unit Disputes</Text>
         <Text style={styles.headerSubtitle}>AI-mediated conflict resolution</Text>
       </View>
-
+ 
       <ScrollView 
-        showsVerticalScrollIndicator={false}
+        showsVerticalScrollIndicator={false} 
         contentContainerStyle={styles.scrollContent}
       >
         <Text style={styles.sectionTitle}>Requires Owner Action</Text>
-        <DisputeCard 
-          title="Sink Faucet Leakage"
-          status="Action Pending"
-          timestamp="4 hours ago"
-          category="Maintenance"
-          statusColor={Colors.warning}
-          index={0}
-          onPress={() => router.push("/dispute-verdict" as any)}
-        />
+        {activeDisputes.length === 0 ? (
+          <Text style={styles.emptyText}>No active disputes for this unit.</Text>
+        ) : (
+          activeDisputes.map((d, index) => (
+            <DisputeCard 
+              key={d.id}
+              title={d.title}
+              status={d.status}
+              timestamp={d.date}
+              category={d.category}
+              statusColor={Colors.warning}
+              index={index}
+              onPress={() => router.push("/dispute-verdict" as any)}
+            />
+          ))
+        )}
 
         <Text style={styles.sectionTitle}>Archived Resolutions</Text>
-        <DisputeCard 
-          title="Late Fee Dispute"
-          status="Resolved (AI)"
-          timestamp="Feb 12, 2026"
-          category="Financial"
-          statusColor={Colors.success}
-          index={1}
-          resolved
-          onPress={() => router.push("/dispute-verdict" as any)}
-        />
+        {resolvedDisputes.map((d, index) => (
+          <DisputeCard 
+            key={d.id}
+            title={d.title}
+            status={d.status}
+            timestamp={d.date}
+            category={d.category}
+            statusColor={d.status === 'Resolved' ? Colors.success : Colors.danger}
+            index={index}
+            resolved
+            onPress={() => router.push("/dispute-verdict" as any)}
+          />
+        ))}
 
         <View style={{ height: 100 }} />
       </ScrollView>
@@ -179,4 +197,10 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: Colors.accent,
   },
+  emptyText: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    marginBottom: 20,
+    fontStyle: 'italic',
+  }
 });

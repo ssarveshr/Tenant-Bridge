@@ -7,18 +7,23 @@ import {
   TouchableOpacity,
   SafeAreaView,
   StatusBar,
-  Image,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { Colors, Spacing, Radius } from "../../constants/Theme";
 import Animated, { FadeInUp, SlideInRight } from "react-native-reanimated";
+import { usePropertyStore } from "../../store/propertyStore";
 
 import { useLanguage } from "../../hooks/useLanguage";
 
 export default function PropertyDetailsScreen() {
   const router = useRouter();
+  const { id } = useLocalSearchParams();
   const { t, n } = useLanguage();
+  
+  const property = usePropertyStore((state) => 
+    state.properties.find(p => p.id === id) || state.properties[0]
+  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -46,20 +51,20 @@ export default function PropertyDetailsScreen() {
             <View style={styles.iconBox}>
               <Ionicons name="business-outline" size={32} color={Colors.accent} />
             </View>
-            <View style={styles.headerText}>
-              <Text style={styles.propertyName}>Sunshine Apartments</Text>
-              <Text style={styles.propertyUnit}>{t('unitNumber')}: Flat 402 • {t('residential')}</Text>
+             <View style={styles.headerText}>
+              <Text style={styles.propertyName}>{property.name}</Text>
+              <Text style={styles.propertyUnit}>{t('unitNumber')}: {property.unit} • {t('residential')}</Text>
             </View>
           </View>
           <View style={styles.divider} />
           <View style={styles.statsRow}>
-            <View style={styles.statItem}>
+             <View style={styles.statItem}>
               <Text style={styles.statLabel}>{t('monthlyRent')}</Text>
-              <Text style={styles.statValue}>₹{n('25,000')}</Text>
+              <Text style={styles.statValue}>₹{n(parseInt(property.rent).toLocaleString())}</Text>
             </View>
             <View style={styles.statItem}>
               <Text style={styles.statLabel}>{t('securityDeposit')}</Text>
-              <Text style={styles.statValue}>₹{n('75,000')}</Text>
+              <Text style={styles.statValue}>₹{n(parseInt(property.deposit).toLocaleString())}</Text>
             </View>
           </View>
         </Animated.View>
@@ -74,8 +79,8 @@ export default function PropertyDetailsScreen() {
             <View style={styles.avatar}>
               <Ionicons name="person" size={24} color={Colors.accent} />
             </View>
-            <View style={styles.tenantInfo}>
-              <Text style={styles.tenantName}>John Doe</Text>
+             <View style={styles.tenantInfo}>
+              <Text style={styles.tenantName}>{property.tenantName}</Text>
               <Text style={styles.tenantMeta}>{t('leaseActiveSince')} {n('Jan 2026')}</Text>
             </View>
             <TouchableOpacity 

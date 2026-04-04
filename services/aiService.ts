@@ -1,9 +1,13 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // For Expo, we use EXPO_PUBLIC_ prefix for env variables
-const API_KEY = process.env.EXPO_PUBLIC_GEMINI_API_KEY || "";
+const API_KEY = (process.env.EXPO_PUBLIC_GEMINI_API_KEY || "").trim();
 
 const genAI = new GoogleGenerativeAI(API_KEY);
+
+let globalDisputeVerdict: string | null = null;
+export const getGlobalVerdict = () => globalDisputeVerdict;
+export const setGlobalVerdict = (v: string | null) => { globalDisputeVerdict = v; };
 
 export const translateText = async (text: string, targetLanguage: string) => {
   if (!API_KEY) {
@@ -12,7 +16,7 @@ export const translateText = async (text: string, targetLanguage: string) => {
   }
 
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" }, { apiVersion: 'v1beta' });
     const prompt = `Translate the following rental agreement text into ${targetLanguage}. 
     Keep the tone professional and maintain the legal context. 
     Only return the translated text, no other conversation.
@@ -33,7 +37,7 @@ export const chatWithGemini = async (message: string, history: { role: string; p
   }
 
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" }, { apiVersion: 'v1beta' });
     
     let systemPrompt = "You are a helpful AI assistant for Tenant-Bridge, an app for managing rental agreements and disputes in India. Your goal is to help owners and tenants manage their agreements, resolve disputes fairly, and answer questions about rental laws in India. ";
     
@@ -66,24 +70,47 @@ export const chatWithGemini = async (message: string, history: { role: string; p
   }
 };
 
-export const resolveDispute = async (disputeDetails: string) => {
-  if (!API_KEY) return null;
+export const resolveDisputeWithEvidence = async (disputeDetails: string, base64Image?: string, agreementContext?: string) => {
+  if (!API_KEY) {
+    return "Analysis failed: Gemini API Key is missing. Please ensure EXPO_PUBLIC_GEMINI_API_KEY is defined in your .env file and restart the Expo server.";
+  }
 
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-    const prompt = `Act as an impartial mediator for a rental dispute in India. 
-    Analyze the following dispute details and provide a suggested resolution based on standard rental practices and fairness. 
-    Dispute Details: ${disputeDetails}
-    Provide:
-    1. Summary of the issue.
-    2. Suggested resolution steps.
-    3. Potential fair verdict.`;
+    const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" }, { apiVersion: 'v1beta' });
+    let prompt = `Act as an impartial mediator for a rental dispute in India. 
+    Analyze the following dispute details and provide a suggested resolution based on standard rental practices and fairness. `;
+    
+    if (agreementContext) {
+      prompt += `\n\nCRITICAL CONTEXT - You MUST base your resolution on these specific clauses from their rental agreement:\n"""\n${agreementContext}\n"""\n`;
+    }
 
-    const result = await model.generateContent(prompt);
+    prompt += `\nDispute Details: ${disputeDetails}
+    Return exactly this JSON structure and nothing else:
+    {
+      "clauseReference": "Summary of the agreement clause you are basing this on",
+      "reasoning": "Your step-by-step reasoning for the conflict",
+      "finalVerdict": "Your conclusive suggested resolution"
+    }`;
+
+    const parts: any[] = [{ text: prompt }];
+
+    if (base64Image) {
+      parts.push({
+        inlineData: {
+          data: base64Image,
+          mimeType: "image/jpeg"
+        }
+      });
+    }
+
+    const result = await model.generateContent(parts);
     const response = await result.response;
-    return response.text();
-  } catch (error) {
+    let text = response.text();
+    // Clean markdown code blocks if the model wrapped the JSON in them
+    text = text.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();
+    return text;
+  } catch (error: any) {
     console.error("Dispute resolution error:", error);
-    return null;
+    return `Analysis failed: ${error.message || "Unknown error occurred"}. Please try again without an image or with a smaller image size.`;
   }
 };

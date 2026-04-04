@@ -16,6 +16,9 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { Colors, Spacing, Radius } from "../../constants/Theme";
 import Animated, { FadeInUp } from "react-native-reanimated";
+import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
+import { addProperty } from "../../store/propertyStore";
 
 import { useLanguage } from "../../hooks/useLanguage";
 
@@ -27,12 +30,51 @@ export default function AddPropertyScreen() {
     name: "",
     unit: "",
     location: "",
-    type: "Residential",
+    type: "Residential" as "Residential" | "Commercial",
     rent: "",
     deposit: "",
     dueDate: "",
+    leaseImage: null as string | null,
+    leaseDocumentName: null as string | null,
   });
 
+  const pickImage = async () => {
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      quality: 0.5,
+      base64: true,
+    });
+
+    if (!result.canceled) {
+      setForm({ ...form, leaseImage: result.assets[0].uri, leaseDocumentName: result.assets[0].fileName || "Agreement_Image.jpg" });
+    }
+  };
+
+  const pickDocument = async () => {
+    let result = await DocumentPicker.getDocumentAsync({
+      type: 'application/pdf',
+      copyToCacheDirectory: true,
+    });
+
+    if (!result.canceled) {
+      setForm({ ...form, leaseImage: result.assets[0].uri, leaseDocumentName: result.assets[0].name });
+    }
+  };
+
+  const handleSubmit = () => {
+    if (!form.name || !form.rent) return;
+    
+    // Instead of listing immediately, navigate to customization
+    router.push({
+      pathname: "/owner/agreement-customization",
+      params: { 
+        ...form,
+        leaseImage: form.leaseImage || "",
+        leaseDocumentName: form.leaseDocumentName || ""
+      }
+    } as any);
+  };
   React.useEffect(() => {
     const onBackPress = () => {
       if (step === 2) {
@@ -141,21 +183,41 @@ export default function AddPropertyScreen() {
                 onChangeText={(val: string) => setForm({ ...form, dueDate: val })}
               />
               
-              <TouchableOpacity style={styles.uploadBtn}>
-                <Ionicons name="cloud-upload-outline" size={24} color={Colors.accent} />
-                <Text style={styles.uploadBtnText}>{t('uploadLease')}</Text>
+              <TouchableOpacity 
+                style={[styles.uploadBtn, form.leaseImage ? { borderColor: Colors.success } : null, { marginBottom: 12 }]} 
+                onPress={pickImage}
+              >
+                <Ionicons 
+                  name={form.leaseImage && !form.leaseDocumentName?.endsWith('.pdf') ? "checkmark-circle" : "camera-outline"} 
+                  size={24} 
+                  color={form.leaseImage && !form.leaseDocumentName?.endsWith('.pdf') ? Colors.success : Colors.accent} 
+                />
+                <Text style={[styles.uploadBtnText, form.leaseImage && !form.leaseDocumentName?.endsWith('.pdf') ? { color: Colors.success } : null]}>
+                  {form.leaseImage && !form.leaseDocumentName?.endsWith('.pdf') ? "Photo Attached" : "Upload Photo Copy"}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={[styles.uploadBtn, form.leaseDocumentName?.endsWith('.pdf') ? { borderColor: Colors.success } : null]} 
+                onPress={pickDocument}
+              >
+                <Ionicons 
+                  name={form.leaseDocumentName?.endsWith('.pdf') ? "document-text" : "document-attach-outline"} 
+                  size={24} 
+                  color={form.leaseDocumentName?.endsWith('.pdf') ? Colors.success : Colors.accent} 
+                />
+                <Text style={[styles.uploadBtnText, form.leaseDocumentName?.endsWith('.pdf') ? { color: Colors.success } : null]}>
+                  {form.leaseDocumentName?.endsWith('.pdf') ? `Attached: ${form.leaseDocumentName}` : "Upload Digital PDF"}
+                </Text>
               </TouchableOpacity>
             </Animated.View>
           )}
 
           <TouchableOpacity 
             style={styles.primaryBtn} 
-            onPress={() => {
-              if (step === 1) setStep(2);
-              else router.back();
-            }}
+            onPress={() => step === 1 ? setStep(2) : handleSubmit()}
           >
-            <Text style={styles.primaryBtnText}>{step === 1 ? t('nextStep') : t('listProperty')}</Text>
+            <Text style={styles.primaryBtnText}>{step === 1 ? t('nextStep') : "Next: Customize Clauses"}</Text>
           </TouchableOpacity>
 
           <View style={{ height: 100 }} />

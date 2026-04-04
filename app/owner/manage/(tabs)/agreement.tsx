@@ -10,12 +10,17 @@ import {
   Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { Colors, Spacing, Radius } from "../../../../constants/Theme";
 import Animated, { FadeIn } from "react-native-reanimated";
+import { usePropertyStore } from "../../../../store/propertyStore";
 
 export default function OwnerManageAgreementScreen() {
   const router = useRouter();
+  const { id } = useLocalSearchParams();
+  const property = usePropertyStore((state) => 
+    state.properties.find(p => p.id === id) || state.properties[0]
+  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -41,26 +46,33 @@ export default function OwnerManageAgreementScreen() {
             <View style={styles.docInfo}>
               <Ionicons name="document-attach" size={24} color={Colors.accent} />
               <View style={{ marginLeft: 12 }}>
-                <Text style={styles.fileName}>Sunshine_Apts_Lease.pdf</Text>
-                <Text style={styles.fileSize}>2.4 MB • Uploaded Mar 1, 2026</Text>
+                <Text style={styles.fileName}>{property.leaseDocumentName || "Sunshine_Apts_Lease.pdf"}</Text>
+                <Text style={styles.fileSize}>
+                  {property.leaseDocumentName?.endsWith('.pdf') ? "2.4 MB" : "0.8 MB"} • Uploaded {new Date(property.createdAt).toLocaleDateString()}
+                </Text>
               </View>
             </View>
             <View style={styles.divider} />
-            <Text style={styles.docPreviewHeader}>AI-Generated Summary</Text>
-            <Text style={styles.docSummaryText}>
-              • Monthly rent fixed at ₹25,000.{"\n"}
-              • Lease tenure is 12 months with a 2-month notice period.{"\n"}
-              • Security deposit of ₹75,000 held by the owner.{"\n"}
-              • Standard 10% rent increment applicable upon renewal.
-            </Text>
+            <Text style={styles.docPreviewHeader}>Legal Source of Truth</Text>
+            <View style={styles.docSummaryText}>
+              <Text style={styles.summaryItem}>• Monthly rent fixed at ₹{parseInt(property.rent).toLocaleString()}.</Text>
+              <Text style={styles.summaryItem}>• Security deposit of ₹{parseInt(property.deposit).toLocaleString()} held by the owner.</Text>
+              <Text style={styles.summaryItem}>• Payment Due Date: {property.dueDate}.</Text>
+              {property.agreementAddons?.map((addon, idx) => (
+                <Text key={`addon-${idx}`} style={styles.summaryItem}>• {addon.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())} included.</Text>
+              ))}
+              {property.customPoints?.map((cp, idx) => (
+                <Text key={`cp-${idx}`} style={styles.summaryItem}>• {cp}.</Text>
+              ))}
+            </View>
           </View>
 
           <Text style={styles.aiLabel}>AI Extracted Terms</Text>
           <View style={styles.aiGrid}>
-            <AiCard label="Rent Amount" value="₹25,000 / mo" icon="cash-outline" />
-            <AiCard label="Due Date" value="Every 5th" icon="calendar-outline" />
-            <AiCard label="Security" value="₹75,000" icon="shield-outline" />
-            <AiCard label="Blockchain Status" value="Verified" icon="link-outline" />
+            <AiCard label="Rent Amount" value={`₹${parseInt(property.rent).toLocaleString()} / mo`} icon="cash-outline" />
+            <AiCard label="Due Date" value={property.dueDate} icon="calendar-outline" />
+            <AiCard label="Security" value={`₹${parseInt(property.deposit).toLocaleString()}`} icon="shield-outline" />
+            <AiCard label="Status" value="Verified" icon="link-outline" />
           </View>
         </Animated.View>
 
@@ -159,10 +171,14 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   docSummaryText: {
+    marginTop: 10,
+  },
+  summaryItem: {
     fontSize: 14,
     color: Colors.textSecondary,
     lineHeight: 22,
     fontWeight: "500",
+    marginBottom: 4,
   },
   divider: {
     height: 1,
