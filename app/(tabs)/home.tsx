@@ -19,17 +19,26 @@ import { usePropertyStore } from "../../store/propertyStore";
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { t, n } = useLanguage();
+  const { t, n, language } = useLanguage();
   const myLease = usePropertyStore((state) => state.getMyLease());
 
   if (!myLease) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.emptyState}>
-          <Ionicons name="home-outline" size={64} color={Colors.border} />
-          <Text style={styles.emptyText}>No Active Rental Agreement</Text>
-          <TouchableOpacity onPress={() => router.replace("/role-selection" as any)}>
-            <Text style={styles.switchText}>Switch to Owner Mode</Text>
+          <View style={styles.emptyIconCircle}>
+            <Ionicons name="home-outline" size={48} color={Colors.accent} />
+          </View>
+          <Text style={styles.emptyTitle}>Welcome to Tenant-Bridge</Text>
+          <Text style={styles.emptySubtitle}>
+            You haven't linked a rental agreement yet. Ask your owner for the Unique Property ID to get started.
+          </Text>
+          <TouchableOpacity 
+            style={styles.joinPrimaryBtn} 
+            onPress={() => router.push("/join-property" as any)}
+          >
+            <Text style={styles.joinPrimaryBtnText}>Connect to My Owner</Text>
+            <Ionicons name="arrow-forward" size={18} color={Colors.white} style={{ marginLeft: 8 }} />
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -67,7 +76,7 @@ export default function HomeScreen() {
             </View>
             <View style={styles.dueBadge}>
               <Text style={styles.dueLabel}>{t('nextDue')}</Text>
-              <Text style={styles.dueDate}>{myLease.dueDate}</Text>
+              <Text style={styles.dueDate}>{n(myLease.dueDate)}</Text>
             </View>
           </View>
         </Animated.View>
@@ -119,16 +128,16 @@ export default function HomeScreen() {
 
         <View style={styles.activityList}>
           <ActivityItem 
-            title={`Rent Paid - ${new Date().toLocaleString('default', { month: 'long' })}`} 
-            date="Mar 5, 2026" 
-            amount={`₹${parseInt(myLease.rent).toLocaleString()}`}
+            title={`${t('rentPaid') || "Rent Paid"} - ${n(new Date().toLocaleString(language === 'en' ? 'en-US' : language, { month: 'long' }))}`} 
+            date={n("Mar 5, 2026")} 
+            amount={`₹${n(parseInt(myLease.rent).toLocaleString())}`}
             status="success"
             delay={600}
           />
           <ActivityItem 
-            title="Maintenance Issue" 
-            date="Feb 28, 2026" 
-            amount="Resolved"
+            title={t('maintenance') || "Maintenance Issue"} 
+            date={n("Feb 28, 2026")} 
+            amount={t('resolved') || "Resolved"}
             status="info"
             delay={700}
           />
@@ -154,6 +163,15 @@ export default function HomeScreen() {
 
         <View style={{ height: 60 }} />
       </ScrollView>
+
+      {/* Floating Action Button for Joining */}
+      <TouchableOpacity 
+        style={styles.fab} 
+        activeOpacity={0.9}
+        onPress={() => router.push("/join-property" as any)}
+      >
+        <Ionicons name="add" size={32} color={Colors.white} />
+      </TouchableOpacity>
 
     </SafeAreaView>
   );
@@ -409,19 +427,64 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     padding: 40,
+    backgroundColor: Colors.white,
   },
-  emptyText: {
-    fontSize: 18,
-    fontWeight: "800",
+  emptyIconCircle: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: "#F0F5FF",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 24,
+  },
+  emptyTitle: {
+    fontSize: 24,
+    fontWeight: "900",
     color: Colors.textPrimary,
-    marginTop: 16,
+    marginBottom: 12,
     textAlign: "center",
   },
-  switchText: {
-    fontSize: 14,
-    color: Colors.accent,
-    fontWeight: "700",
-    marginTop: 12,
-    textDecorationLine: "underline",
+  emptySubtitle: {
+    fontSize: 15,
+    color: Colors.textSecondary,
+    textAlign: "center",
+    lineHeight: 22,
+    marginBottom: 40,
   },
+  joinPrimaryBtn: {
+    backgroundColor: Colors.accent,
+    paddingHorizontal: 30,
+    height: 60,
+    borderRadius: Radius.m,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: Colors.accent,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.2,
+    shadowRadius: 20,
+    elevation: 8,
+  },
+  joinPrimaryBtnText: {
+    color: Colors.white,
+    fontSize: 16,
+    fontWeight: "800",
+  },
+  fab: {
+    position: 'absolute',
+    bottom: 30,
+    right: 24,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: Colors.accent,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: Colors.accent,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
+  }
 });

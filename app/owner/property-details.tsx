@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   SafeAreaView,
   StatusBar,
+  Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -53,6 +54,10 @@ export default function PropertyDetailsScreen() {
             </View>
              <View style={styles.headerText}>
               <Text style={styles.propertyName}>{property.name}</Text>
+              <View style={styles.idRow}>
+                <Text style={styles.idLabel}>Bridge ID: </Text>
+                <Text style={styles.idValue}>{property.id}</Text>
+              </View>
               <Text style={styles.propertyUnit}>{t('unitNumber')}: {property.unit} • {t('residential')}</Text>
             </View>
           </View>
@@ -265,6 +270,22 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "800",
     color: Colors.textPrimary,
+  },
+  idRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: 4,
+  },
+  idLabel: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: Colors.textSecondary,
+  },
+  idValue: {
+    fontSize: 12,
+    fontWeight: "900",
+    color: Colors.accent,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
   },
   sectionTitle: {
     fontSize: 18,

@@ -14,42 +14,64 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { Colors, Spacing, Radius } from "../constants/Theme";
 import Animated, { FadeInUp } from "react-native-reanimated";
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 import { useLanguage } from "../hooks/useLanguage";
 import { translateText } from "../services/aiService";
+import { usePropertyStore } from "../store/propertyStore";
 
 export default function MyAgreementsScreen() {
   const router = useRouter();
-  const { t, language } = useLanguage();
+  const { t, language, n } = useLanguage();
+  const myLease = usePropertyStore((state) => state.getMyLease());
   const [isTranslating, setIsTranslating] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const [translatedClauses, setTranslatedClauses] = useState<any>(null);
 
-  const clauses = [
+  if (!myLease) return null;
+
+  const baseClauses = [
     {
-      number: "1.1",
-      title: "Rent & Duration",
-      content: "Monthly rent of ₹25,000 to be paid on or before the 5th of every month. The lease duration is 12 months."
+      number: n("1.1"),
+      title: t('rentAmount'),
+      content: `${t('monthlyRent')} ${n(parseInt(myLease.rent).toLocaleString())}. ${t('securityDeposit')} ${n(parseInt(myLease.deposit).toLocaleString())}.`
     },
     {
-      number: "2.3",
-      title: "Maintenance",
-      content: "Structural repairs exceeding ₹5000 shall be the owner's responsibility. Tenant handles minor repairs."
+      number: n("2.3"),
+      title: t('maintenance'),
+      content: (myLease.agreementAddons && myLease.agreementAddons.length > 0) 
+        ? `Includes: ${myLease.agreementAddons.map(a => a.replace('_', ' ')).join(', ')}.`
+        : "Standard utility and maintenance rules apply."
     },
     {
-      number: "4.5",
-      title: "Termination",
-      content: "Two months' notice required by either party for termination of the lease before the expiry date."
+      number: n("4.5"),
+      title: t('clauses'),
+      content: (myLease.customPoints && myLease.customPoints.length > 0)
+        ? myLease.customPoints.join('. ')
+        : "No custom terms added by owner."
     }
   ];
 
+  const langNames: Record<string, string> = {
+    en: 'English',
+    hi: 'Hindi',
+    mr: 'Marathi',
+    kn: 'Kannada',
+    or: 'Odia',
+    ml: 'Malayalam',
+    ta: 'Tamil',
+    te: 'Telugu'
+  };
+
   const handleTranslate = async () => {
     if (language === 'en') {
-      Alert.alert("Already in English", "The agreement is already in your preferred language.");
+      Alert.alert(t('alreadyInLanguage') || "Already in English", "The agreement is already in your preferred language.");
       return;
     }
 
     setIsTranslating(true);
     try {
-      const translated = await Promise.all(clauses.map(async (clause) => {
+      const translated = await Promise.all(baseClauses.map(async (clause) => {
         const translatedContent = await translateText(clause.content, language);
         const translatedTitle = await translateText(clause.title, language);
         return { ...clause, title: translatedTitle, content: translatedContent };
@@ -63,7 +85,79 @@ export default function MyAgreementsScreen() {
     }
   };
 
-  const activeClauses = translatedClauses || clauses;
+  const handleDownload = async () => {
+    setIsDownloading(true);
+    try {
+      const targetLangName = langNames[language] || 'Hindi';
+      
+      let html = `
+        <html>
+          <head>
+            <style>
+              body { font-family: 'Helvetica', sans-serif; padding: 40px; color: #1e293b; line-height: 1.6; }
+              .header { text-align: center; border-bottom: 2px solid #3b82f6; padding-bottom: 20px; margin-bottom: 40px; }
+              .title { font-size: 28px; font-weight: 900; color: #1e293b; margin: 0; }
+              .contract-id { font-size: 12px; color: #64748b; font-family: monospace; margin-top: 8px; }
+              .section { margin-top: 30px; }
+              .section-title { font-size: 14px; font-weight: 800; text-transform: uppercase; color: #3b82f6; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 15px; }
+              .clause { margin-bottom: 20px; padding: 15px; background: #f8fafc; border-radius: 8px; }
+              .clause-title { font-size: 16px; font-weight: 700; color: #0f172a; margin-bottom: 8px; }
+              .clause-content { font-size: 14px; color: #334155; }
+              .footer { margin-top: 60px; text-align: center; font-size: 11px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 20px; }
+            </style>
+          </head>
+          <body>
+            <div class="header">
+              <h1 class="title">${t('digitalAgreement')}</h1>
+              <div class="contract-id">ID: ${myLease.id.toUpperCase()}</div>
+            </div>
+
+            <div class="section">
+              <div class="section-title">${t('propertyDetails')}</div>
+              <p><strong>${myLease.name}</strong><br/>${t('unitNumber')}: ${n(myLease.unit)}</p>
+            </div>
+
+            <div class="section">
+              <div class="section-title">${t('clauses')}</div>
+              <div class="clause">
+                <div class="clause-title">${n("1.1")} ${t('rentAmount')}</div>
+                <div class="clause-content">${t('monthlyRent')}: ₹${n(parseInt(myLease.rent).toLocaleString())}. ${t('securityDeposit')}: ₹${n(parseInt(myLease.deposit).toLocaleString())}.</div>
+              </div>
+              <div class="clause">
+                <div class="clause-title">${n("2.3")} ${t('maintenance')}</div>
+                <div class="clause-content">${(myLease.agreementAddons && myLease.agreementAddons.length > 0) ? `Includes: ${myLease.agreementAddons.map(a => a.replace('_', ' ')).join(', ')}.` : "Standard utility rules apply."}</div>
+              </div>
+              <div class="clause">
+                <div class="clause-title">${n("4.5")} ${t('clauses')}</div>
+                <div class="clause-content">${(myLease.customPoints && myLease.customPoints.length > 0) ? myLease.customPoints.join('. ') : "No custom terms defined."}</div>
+              </div>
+            </div>
+
+            <div class="footer">
+              This is a digital lease cryptographically signed via Tenant-Bridge.<br/>
+              &copy; 2026 Tenant-Bridge Blockchain Solutions
+            </div>
+          </body>
+        </html>
+      `;
+
+      // If not English, translate the whole HTML content
+      if (language !== 'en') {
+        html = await translateText(html, targetLangName);
+      }
+
+      const { uri } = await Print.printToFileAsync({ html });
+      await Sharing.shareAsync(uri, { UTI: '.pdf', mimeType: 'application/pdf' });
+      
+    } catch (error) {
+      console.error(error);
+      Alert.alert("Export Failed", "Could not generate PDF at this moment.");
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  const activeClauses = translatedClauses || baseClauses;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -90,19 +184,19 @@ export default function MyAgreementsScreen() {
         <Animated.View entering={FadeInUp.delay(100).duration(500)} style={styles.activeCard}>
           <View style={styles.cardHeader}>
             <View style={styles.badge}>
-              <Text style={styles.badgeText}>Active</Text>
+              <Text style={styles.badgeText}>{t('active')}</Text>
             </View>
-            <Text style={styles.expiryText}>Expires: March 2027</Text>
+            <Text style={styles.expiryText}>{t('leaseActiveSince')}: {n(new Date(myLease.createdAt).toLocaleDateString())}</Text>
           </View>
-          <Text style={styles.propertyTitle}>Sunshine Apartments - Flat 402</Text>
-          <Text style={styles.hashText}>Contract Hash: 0x8a1...f092</Text>
+          <Text style={styles.propertyTitle}>{myLease.name} - {n(myLease.unit)}</Text>
+          <Text style={styles.hashText}>{t('contractId') || "Contract ID"}: {myLease.id.slice(0, 12).toUpperCase()}</Text>
           
           <View style={styles.divider} />
           
           <View style={styles.parties}>
-            <PartyInfo role="Owner" name="Mr. Rajesh Kumar" />
+            <PartyInfo role={t('owner')} name={t('houseOwner')} />
             <View style={styles.arrowIcon}><Ionicons name="arrow-forward" size={16} color={Colors.border} /></View>
-            <PartyInfo role="Tenant" name="Demo User" />
+            <PartyInfo role={t('tenant')} name={n(myLease.tenantName)} />
           </View>
         </Animated.View>
 
@@ -125,14 +219,19 @@ export default function MyAgreementsScreen() {
           />
         ))}
 
-        <TouchableOpacity style={styles.uploadBtn}>
-          <Ionicons name="cloud-upload-outline" size={20} color={Colors.white} />
-          <Text style={styles.uploadBtnText}>{t('uploadAgreement')}</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.downloadBtn}>
-          <Ionicons name="download-outline" size={20} color={Colors.textPrimary} />
-          <Text style={styles.downloadBtnText}>Download PDF Copy</Text>
+        <TouchableOpacity 
+          style={styles.downloadBtn}
+          onPress={handleDownload}
+          disabled={isDownloading}
+        >
+          {isDownloading ? (
+            <ActivityIndicator size="small" color={Colors.textPrimary} />
+          ) : (
+            <Ionicons name="download-outline" size={20} color={Colors.textPrimary} />
+          )}
+          <Text style={styles.downloadBtnText}>
+            {isDownloading ? "Generating PDF..." : "Download PDF Copy"}
+          </Text>
         </TouchableOpacity>
 
         <View style={{ height: 40 }} />
@@ -321,26 +420,6 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     fontWeight: "500",
   },
-  uploadBtn: {
-    backgroundColor: Colors.accent,
-    height: 60,
-    borderRadius: Radius.m,
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: Spacing.xl,
-    shadowColor: Colors.accent,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    elevation: 4,
-  },
-  uploadBtnText: {
-    color: Colors.white,
-    fontSize: 16,
-    fontWeight: "bold",
-    marginLeft: 12,
-  },
   downloadBtn: {
     backgroundColor: Colors.white,
     height: 60,
@@ -348,7 +427,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    marginTop: Spacing.m,
+    marginTop: Spacing.xl,
     borderWidth: 1,
     borderColor: Colors.border,
   },

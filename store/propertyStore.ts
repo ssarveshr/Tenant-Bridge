@@ -10,27 +10,32 @@ export interface Property {
   deposit: string;
   dueDate: string;
   tenantName: string;
-  status: 'Received' | 'Overdue' | 'Pending';
+  status: 'Awaiting_Tenant' | 'Reviewing' | 'Active' | 'Revision_Requested' | 'Received' | 'Overdue';
   leaseImage?: string;
   leaseDocumentName?: string;
   agreementAddons?: string[];
   customPoints?: string[];
+  revisionNotes?: string;
   createdAt: string;
 }
 
 interface PropertyStore {
   properties: Property[];
-  currentTenantName: string; // Simulated logged-in tenant
+  currentTenantName: string;
   addProperty: (property: Omit<Property, 'id' | 'createdAt' | 'status' | 'tenantName'>) => Property;
   getProperties: () => Property[];
   getPropertyById: (id: string) => Property | undefined;
   getMyLease: () => Property | undefined;
+  linkTenant: (propertyId: string, tenantName: string) => void;
+  acknowledgeLease: (propertyId: string) => void;
+  requestRevision: (propertyId: string, notes: string) => void;
+  updateProperty: (propertyId: string, updates: Partial<Property>) => void;
 }
 
-// Initial mock data to match existing UI
+// Initial mock data
 const initialProperties: Property[] = [
   {
-    id: "1",
+    id: "sun-402",
     name: "Sunshine Apartments",
     unit: "Flat 402",
     location: "Downtown",
@@ -39,35 +44,22 @@ const initialProperties: Property[] = [
     deposit: "75000",
     dueDate: "Every 5th",
     tenantName: "John Doe",
-    status: "Received",
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "2",
-    name: "Green Valley Flats",
-    unit: "Villa 9",
-    location: "Suburbs",
-    type: "Residential",
-    rent: "45000",
-    deposit: "135000",
-    dueDate: "Every 1st",
-    tenantName: "Sarah Smith",
-    status: "Overdue",
+    status: "Active",
     createdAt: new Date().toISOString(),
   }
 ];
 
 export const usePropertyStore = create<PropertyStore>((set, get) => ({
   properties: initialProperties,
-  currentTenantName: "John Doe", // Default simulated tenant
+  currentTenantName: "John Doe",
   
   addProperty: (newProp) => {
     const property: Property = {
       ...newProp,
-      id: Math.random().toString(36).substring(7),
+      id: Math.random().toString(36).substring(7).toUpperCase(),
       createdAt: new Date().toISOString(),
-      status: 'Pending', // Default status for new property
-      tenantName: 'TBD',   // Initial placeholder
+      status: 'Awaiting_Tenant',
+      tenantName: 'TBD',
     };
     
     set((state) => ({
@@ -78,12 +70,51 @@ export const usePropertyStore = create<PropertyStore>((set, get) => ({
   },
   
   getProperties: () => get().properties,
-  
-  getPropertyById: (id) => get().properties.find(p => p.id === id),
+  getPropertyById: (id) => get().properties.find(p => p.id === id || p.id.toLowerCase() === id.toLowerCase()),
   
   getMyLease: () => {
     const { properties, currentTenantName } = get();
-    return properties.find(p => p.tenantName === currentTenantName);
+    return properties.find(p => p.tenantName === currentTenantName && p.status !== 'Awaiting_Tenant');
+  },
+
+  linkTenant: (propertyId, tenantName) => {
+    set((state) => ({
+      properties: state.properties.map(p => 
+        (p.id === propertyId || p.id.toLowerCase() === propertyId.toLowerCase()) 
+        ? { ...p, tenantName, status: 'Reviewing' } 
+        : p
+      )
+    }));
+  },
+
+  acknowledgeLease: (propertyId) => {
+    set((state) => ({
+      properties: state.properties.map(p => 
+        (p.id === propertyId || p.id.toLowerCase() === propertyId.toLowerCase()) 
+        ? { ...p, status: 'Active' } 
+        : p
+      )
+    }));
+  },
+
+  requestRevision: (propertyId, notes) => {
+    set((state) => ({
+      properties: state.properties.map(p => 
+        (p.id === propertyId || p.id.toLowerCase() === propertyId.toLowerCase()) 
+        ? { ...p, status: 'Revision_Requested', revisionNotes: notes } 
+        : p
+      )
+    }));
+  },
+
+  updateProperty: (propertyId, updates) => {
+    set((state) => ({
+      properties: state.properties.map(p => 
+        (p.id === propertyId || p.id.toLowerCase() === propertyId.toLowerCase()) 
+        ? { ...p, ...updates, status: 'Reviewing', revisionNotes: undefined } 
+        : p
+      )
+    }));
   },
 }));
 

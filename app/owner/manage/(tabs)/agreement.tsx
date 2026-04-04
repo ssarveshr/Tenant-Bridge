@@ -41,6 +41,26 @@ export default function OwnerManageAgreementScreen() {
         contentContainerStyle={styles.scrollContent}
       >
         <Animated.View entering={FadeIn.duration(400)}>
+          {property.status === 'Revision_Requested' && (
+            <View style={styles.revisionAlert}>
+              <View style={styles.alertHeader}>
+                <Ionicons name="chatbubble-ellipses-outline" size={20} color={Colors.warning} />
+                <Text style={styles.alertTitle}>Revision Requested by Tenant</Text>
+              </View>
+              <Text style={styles.revisionNote}>"{property.revisionNotes || "Please review the agreement terms."}"</Text>
+              <TouchableOpacity 
+                style={styles.modifyBtn}
+                onPress={() => router.push({
+                  pathname: "/owner/agreement-customization",
+                  params: { id: property.id, mode: 'edit' }
+                } as any)}
+              >
+                <Text style={styles.modifyBtnText}>Modify & Resubmit</Text>
+                <Ionicons name="create-outline" size={16} color={Colors.white} style={{ marginLeft: 6 }} />
+              </TouchableOpacity>
+            </View>
+          )}
+
           <Text style={styles.sectionTitle}>Uploaded Agreement</Text>
           <View style={styles.agreementDoc}>
             <View style={styles.docInfo}>
@@ -240,4 +260,47 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginLeft: 12,
   },
+  revisionAlert: {
+    backgroundColor: "#FFFBEB",
+    borderRadius: Radius.m,
+    padding: Spacing.l,
+    borderWidth: 1,
+    borderColor: "#FEF3C7",
+    marginBottom: Spacing.xl,
+  },
+  alertHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 10,
+    gap: 8,
+  },
+  alertTitle: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: Colors.warning,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  revisionNote: {
+    fontSize: 15,
+    color: Colors.textPrimary,
+    lineHeight: 22,
+    fontStyle: 'italic',
+    marginBottom: 16,
+    marginLeft: 4,
+  },
+  modifyBtn: {
+    backgroundColor: Colors.accent,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: Radius.s,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modifyBtnText: {
+    color: Colors.white,
+    fontSize: 14,
+    fontWeight: "700",
+  }
 });

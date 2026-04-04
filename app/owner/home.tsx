@@ -14,6 +14,7 @@ import Animated, { FadeInRight, FadeInUp } from "react-native-reanimated";
 import { Colors, Radius, Spacing } from "../../constants/Theme";
 import { useLanguage } from "../../hooks/useLanguage";
 import { usePropertyStore } from "../../store/propertyStore";
+import { Platform } from "react-native";
 
 export default function OwnerHomeScreen() {
   const router = useRouter();
@@ -194,6 +195,10 @@ function PropertyMiniCard({ id, name, unit, tenant, status, statusColor, delay, 
         <Text style={[styles.pStatus, { color: statusColor }]}>• {unit}</Text>
       </View>
       <Text style={styles.pName}>{name}</Text>
+      <View style={styles.idRow}>
+        <Text style={styles.idLabel}>Bridge ID: </Text>
+        <Text style={styles.idValue}>{id}</Text>
+      </View>
       <Text style={styles.pTenant}>{t('tenant')}: {tenant}</Text>
       <TouchableOpacity
         style={styles.pFooter}
@@ -430,6 +435,22 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.textSecondary,
     marginBottom: 12,
+  },
+  idRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  idLabel: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: Colors.textSecondary,
+  },
+  idValue: {
+    fontSize: 12,
+    fontWeight: "900",
+    color: Colors.accent,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
   },
   pFooter: {
     flexDirection: "row",
