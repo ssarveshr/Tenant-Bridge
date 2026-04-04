@@ -1,18 +1,17 @@
-import React from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  SafeAreaView,
-  StatusBar,
-  Image,
-} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { Colors, Spacing, Radius } from "../../constants/Theme";
+import React from "react";
+import {
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
+} from "react-native";
 import Animated, { FadeInUp, SlideInRight } from "react-native-reanimated";
+import { Colors, Radius, Spacing } from "../../constants/Theme";
 
 import { useLanguage } from "../../hooks/useLanguage";
 
@@ -23,7 +22,7 @@ export default function PropertyDetailsScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
-      
+
       {/* Header */}
       <View style={styles.header}>
         <View style={{ width: 24 }} />
@@ -33,12 +32,12 @@ export default function PropertyDetailsScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView 
+      <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
         {/* Main Property Info Card */}
-        <Animated.View 
+        <Animated.View
           entering={FadeInUp.delay(100).duration(500)}
           style={styles.mainCard}
         >
@@ -66,7 +65,7 @@ export default function PropertyDetailsScreen() {
 
         {/* Current Tenant Section */}
         <Text style={styles.sectionTitle}>{t('tenant')}</Text>
-        <Animated.View 
+        <Animated.View
           entering={FadeInUp.delay(200).duration(500)}
           style={styles.tenantCard}
         >
@@ -78,7 +77,7 @@ export default function PropertyDetailsScreen() {
               <Text style={styles.tenantName}>John Doe</Text>
               <Text style={styles.tenantMeta}>{t('leaseActiveSince')} {n('Jan 2026')}</Text>
             </View>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.scoreBadge}
               onPress={() => router.push("/credit-score" as any)}
             >
@@ -90,7 +89,7 @@ export default function PropertyDetailsScreen() {
               <Ionicons name="call-outline" size={20} color={Colors.accent} />
               <Text style={styles.actionBtnText}>{t('call')}</Text>
             </TouchableOpacity>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.actionBtn}
               onPress={() => router.push("/chat" as any)}
             >
@@ -102,11 +101,11 @@ export default function PropertyDetailsScreen() {
 
         {/* Quick Links */}
         <View style={styles.linksContainer}>
-          <LinkItem 
-            icon="document-text-outline" 
-            label={t('sharedAgreement')} 
-            delay={300} 
-            onPress={() => router.push("/owner/upload-agreement" as any)} 
+          <LinkItem
+            icon="document-text-outline"
+            label={t('sharedAgreement')}
+            delay={300}
+            onPress={() => router.push("/owner/upload-agreement" as any)}
           />
           <LinkItem icon="alert-circle-outline" label={t('disputes')} count={n(1)} delay={400} />
           <LinkItem icon="hammer-outline" label={t('maintenanceLog')} delay={500} />

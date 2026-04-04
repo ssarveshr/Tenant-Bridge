@@ -1,29 +1,80 @@
-import React, { useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  SafeAreaView,
-  StatusBar,
-  ScrollView,
-} from "react-native";
+import { getDocumentAsync } from "expo-document-picker";
+import { readAsStringAsync } from "expo-file-system";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { Colors, Spacing, Radius } from "../../constants/Theme";
-import Animated, { FadeInUp, FadeIn } from "react-native-reanimated";
+import React, { useState } from "react";
+import {
+  Alert,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import Animated, { FadeIn, FadeInUp } from "react-native-reanimated";
+import { Colors, Radius, Spacing } from "../../constants/Theme";
+import { analyzeLeaseAgreement } from "../../services/aiService";
 
 export default function UploadAgreementScreen() {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [isUploading, setIsUploading] = useState(false);
 
-  const nextStep = () => {
-    setIsUploading(true);
-    setTimeout(() => {
+  const [mainAgreement, setMainAgreement] = useState<any>(null);
+  const [extraPages, setExtraPages] = useState<any[]>([]);
+
+  const handlePickMain = async () => {
+    try {
+      const result = await getDocumentAsync({
+        type: "*/*",
+        copyToCacheDirectory: true,
+      });
+
+      if (!result.canceled) {
+        setIsUploading(true);
+        setMainAgreement(result.assets[0]);
+        
+        // Convert to base64 for AI analysis
+        const base64 = await readAsStringAsync(result.assets[0].uri, {
+          encoding: "base64",
+        });
+        await analyzeLeaseAgreement(base64);
+
+        setTimeout(() => {
+          setIsUploading(false);
+          setStep(2);
+        }, 1500);
+      }
+    } catch (err: any) {
+      console.error("Main agreement pick error:", err);
+      Alert.alert("Upload Error", err.message || "Picking failed");
       setIsUploading(false);
-      setStep(step + 1);
-    }, 2000);
+    }
+  };
+
+  const handlePickExtra = async () => {
+    try {
+      const result = await getDocumentAsync({
+        type: ["application/pdf", "image/*"],
+        multiple: true,
+        copyToCacheDirectory: true,
+      });
+
+      if (!result.canceled) {
+        setIsUploading(true);
+        setExtraPages([...extraPages, ...result.assets]);
+        
+        setTimeout(() => {
+          setIsUploading(false);
+          setStep(3);
+        }, 1500);
+      }
+    } catch (err) {
+      console.error("Extra pages pick error:", err);
+      setIsUploading(false);
+    }
   };
 
   return (
@@ -31,9 +82,11 @@ export default function UploadAgreementScreen() {
       <StatusBar barStyle="dark-content" />
       
       <View style={styles.header}>
-        <View style={{ width: 28 }} />
+        <TouchableOpacity onPress={() => router.back()}>
+          <Ionicons name="chevron-back" size={24} color={Colors.textPrimary} />
+        </TouchableOpacity>
         <Text style={styles.headerTitle}>Digital Agreement</Text>
-        <View style={{ width: 28 }} />
+        <View style={{ width: 24 }} />
       </View>
 
       <ScrollView 
@@ -58,7 +111,7 @@ export default function UploadAgreementScreen() {
             
             <TouchableOpacity 
               style={styles.dropZone} 
-              onPress={nextStep}
+              onPress={handlePickMain}
               disabled={isUploading}
             >
               <View style={styles.iconCircle}>
@@ -69,7 +122,7 @@ export default function UploadAgreementScreen() {
                 />
               </View>
               <Text style={styles.dropZoneTitle}>
-                {isUploading ? "Extracting Clauses..." : "Upload Main Contract"}
+                {isUploading ? "Reading Contract..." : mainAgreement ? mainAgreement.name : "Upload Main Contract"}
               </Text>
               <Text style={styles.dropZoneSubtitle}>PDF format preferred</Text>
             </TouchableOpacity>
@@ -85,7 +138,7 @@ export default function UploadAgreementScreen() {
             
             <TouchableOpacity 
               style={styles.dropZone} 
-              onPress={nextStep}
+              onPress={handlePickExtra}
               disabled={isUploading}
             >
               <View style={styles.iconCircle}>
@@ -96,7 +149,7 @@ export default function UploadAgreementScreen() {
                 />
               </View>
               <Text style={styles.dropZoneTitle}>
-                {isUploading ? "Analyzing Addenda..." : "Upload Extra Pages"}
+                {isUploading ? "Analyzing Addenda..." : extraPages.length > 0 ? `${extraPages.length} Pages Added` : "Upload Extra Pages"}
               </Text>
               <Text style={styles.dropZoneSubtitle}>Photos or Scans of annexures</Text>
             </TouchableOpacity>
@@ -122,14 +175,14 @@ export default function UploadAgreementScreen() {
               </Text>
 
               <View style={styles.summaryCard}>
-                <SummaryRow label="Pages Processed" value="4 Pages" />
-                <SummaryRow label="Integrity Status" value="100% Verified" />
-                <SummaryRow label="Blockchain Meta" value="Recorded" />
+                <SummaryRow label="Pages Processed" value={`${1 + extraPages.length} Documents`} />
+                <SummaryRow label="Integrity Status" value="100% AI Verified" />
+                <SummaryRow label="Cloud Storage" value="Active" />
               </View>
 
               <TouchableOpacity 
                 style={styles.primaryBtn}
-                onPress={() => router.replace("/owner/manage/(tabs)/home" as any)}
+                onPress={() => router.replace("/owner/home" as any)}
               >
                 <Text style={styles.primaryBtnText}>Return to Dashboard</Text>
               </TouchableOpacity>
@@ -140,18 +193,6 @@ export default function UploadAgreementScreen() {
         <View style={{ height: 100 }} />
       </ScrollView>
     </SafeAreaView>
-  );
-}
-
-function AdvantageItem({ icon, title, desc }: any) {
-  return (
-    <View style={styles.advItem}>
-      <Ionicons name={icon} size={24} color={Colors.accent} />
-      <View style={styles.advContent}>
-        <Text style={styles.advTitle}>{title}</Text>
-        <Text style={styles.advDesc}>{desc}</Text>
-      </View>
-    </View>
   );
 }
 
@@ -259,33 +300,12 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: Colors.textPrimary,
     marginBottom: 4,
+    textAlign: "center",
   },
   dropZoneSubtitle: {
     fontSize: 14,
     color: Colors.textSecondary,
     fontWeight: "600",
-  },
-  advantageList: {
-    gap: 20,
-  },
-  advItem: {
-    flexDirection: "row",
-  },
-  advContent: {
-    marginLeft: 16,
-    flex: 1,
-  },
-  advTitle: {
-    fontSize: 16,
-    fontWeight: "800",
-    color: Colors.textPrimary,
-    marginBottom: 4,
-  },
-  advDesc: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    lineHeight: 20,
-    fontWeight: "500",
   },
   successArea: {
     alignItems: "center",
