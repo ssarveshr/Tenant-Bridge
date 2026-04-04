@@ -22,9 +22,7 @@ export default function CreditScoreScreen() {
       
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
-        </TouchableOpacity>
+        <View style={{ width: 24 }} />
         <Text style={styles.headerTitle}>Trust Score</Text>
         <TouchableOpacity>
           <Ionicons name="share-outline" size={24} color={Colors.textPrimary} />

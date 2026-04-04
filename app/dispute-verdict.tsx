@@ -21,9 +21,7 @@ export default function DisputeVerdictScreen() {
       <StatusBar barStyle="dark-content" />
       
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="close" size={28} color={Colors.textPrimary} />
-        </TouchableOpacity>
+        <View style={{ width: 24 }} />
         <Text style={styles.headerTitle}>AI Resolution Verdict</Text>
         <View style={{ width: 28 }} />
       </View>

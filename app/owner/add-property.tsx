@@ -10,6 +10,7 @@ import {
   StatusBar,
   KeyboardAvoidingView,
   Platform,
+  BackHandler,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -19,15 +20,39 @@ import Animated, { FadeInUp } from "react-native-reanimated";
 export default function AddPropertyScreen() {
   const router = useRouter();
   const [step, setStep] = useState(1);
+  const [form, setForm] = useState({
+    name: "",
+    unit: "",
+    location: "",
+    type: "Residential",
+    rent: "",
+    deposit: "",
+    dueDate: "",
+  });
+
+  React.useEffect(() => {
+    const onBackPress = () => {
+      if (step === 2) {
+        setStep(1);
+        return true;
+      }
+      return false;
+    };
+
+    const subscription = BackHandler.addEventListener(
+      "hardwareBackPress",
+      onBackPress
+    );
+
+    return () => subscription.remove();
+  }, [step]);
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
       
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
-        </TouchableOpacity>
+        <View style={{ width: 24 }} />
         <Text style={styles.headerTitle}>Add New Property</Text>
         <View style={{ width: 24 }} />
       </View>
@@ -53,21 +78,63 @@ export default function AddPropertyScreen() {
 
           {step === 1 ? (
             <Animated.View entering={FadeInUp.duration(500)} style={styles.form}>
-              <InputGroup label="Property Name" placeholder="e.g. Sunshine Apartments" />
-              <InputGroup label="Unit Number" placeholder="e.g. Flat 402" />
-              <InputGroup label="Location" placeholder="Enter locality" />
+              <InputGroup 
+                label="Property Name" 
+                placeholder="e.g. Sunshine Apartments" 
+                value={form.name}
+                onChangeText={(val: string) => setForm({ ...form, name: val })}
+              />
+              <InputGroup 
+                label="Unit Number" 
+                placeholder="e.g. Flat 402" 
+                value={form.unit}
+                onChangeText={(val: string) => setForm({ ...form, unit: val })}
+              />
+              <InputGroup 
+                label="Location" 
+                placeholder="Enter locality" 
+                value={form.location}
+                onChangeText={(val: string) => setForm({ ...form, location: val })}
+              />
               
               <Text style={styles.label}>Property Type</Text>
               <View style={styles.typeRow}>
-                <TypeOption label="Residential" icon="home" selected />
-                <TypeOption label="Commercial" icon="business" />
+                <TypeOption 
+                  label="Residential" 
+                  icon="home" 
+                  selected={form.type === "Residential"} 
+                  onPress={() => setForm({ ...form, type: "Residential" })}
+                />
+                <TypeOption 
+                  label="Commercial" 
+                  icon="business" 
+                  selected={form.type === "Commercial"} 
+                  onPress={() => setForm({ ...form, type: "Commercial" })}
+                />
               </View>
             </Animated.View>
           ) : (
             <Animated.View entering={FadeInUp.duration(500)} style={styles.form}>
-              <InputGroup label="Monthly Rent (₹)" placeholder="25000" keyboardType="numeric" />
-              <InputGroup label="Security Deposit (₹)" placeholder="75000" keyboardType="numeric" />
-              <InputGroup label="Payment Due Date" placeholder="Every 5th" />
+              <InputGroup 
+                label="Monthly Rent (₹)" 
+                placeholder="25000" 
+                keyboardType="numeric" 
+                value={form.rent}
+                onChangeText={(val: string) => setForm({ ...form, rent: val })}
+              />
+              <InputGroup 
+                label="Security Deposit (₹)" 
+                placeholder="75000" 
+                keyboardType="numeric" 
+                value={form.deposit}
+                onChangeText={(val: string) => setForm({ ...form, deposit: val })}
+              />
+              <InputGroup 
+                label="Payment Due Date" 
+                placeholder="Every 5th" 
+                value={form.dueDate}
+                onChangeText={(val: string) => setForm({ ...form, dueDate: val })}
+              />
               
               <TouchableOpacity style={styles.uploadBtn}>
                 <Ionicons name="cloud-upload-outline" size={24} color={Colors.accent} />
@@ -99,7 +166,7 @@ export default function AddPropertyScreen() {
   );
 }
 
-function InputGroup({ label, placeholder, keyboardType = "default" }: any) {
+function InputGroup({ label, placeholder, value, onChangeText, keyboardType = "default" }: any) {
   return (
     <View style={styles.inputGroup}>
       <Text style={styles.label}>{label}</Text>
@@ -108,14 +175,19 @@ function InputGroup({ label, placeholder, keyboardType = "default" }: any) {
         placeholder={placeholder} 
         placeholderTextColor={Colors.textSecondary}
         keyboardType={keyboardType}
+        value={value}
+        onChangeText={onChangeText}
       />
     </View>
   );
 }
 
-function TypeOption({ label, icon, selected }: any) {
+function TypeOption({ label, icon, selected, onPress }: any) {
   return (
-    <TouchableOpacity style={[styles.typeBox, selected && styles.typeBoxSelected]}>
+    <TouchableOpacity 
+      style={[styles.typeBox, selected && styles.typeBoxSelected]}
+      onPress={onPress}
+    >
       <Ionicons name={icon as any} size={20} color={selected ? Colors.white : Colors.textPrimary} />
       <Text style={[styles.typeLabel, selected && styles.typeLabelSelected]}>{label}</Text>
     </TouchableOpacity>

@@ -33,9 +33,7 @@ export default function ChatScreen() {
       
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
-        </TouchableOpacity>
+        <View style={{ width: 24 }} />
         <View style={styles.headerInfo}>
           <View style={styles.avatarMini}>
             <Ionicons name="person" size={16} color={Colors.accent} />

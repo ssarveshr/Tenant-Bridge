@@ -43,9 +43,6 @@ export default function SignupScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
         >
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
-          </TouchableOpacity>
 
           <View style={styles.formArea}>
             <Animated.View entering={FadeInUp.delay(100).duration(500)}>

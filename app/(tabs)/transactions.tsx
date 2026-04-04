@@ -52,6 +52,30 @@ export default function TransactionsScreen() {
             hash="0x9f1...2c90"
             index={2}
           />
+          <TransactionCard 
+            title="House Rent - February 2026"
+            date="Feb 2, 2026"
+            amount="₹25,000"
+            method="Razorpay (Online)"
+            hash="0xb4d...e7c1"
+            index={3}
+          />
+          <TransactionCard 
+            title="House Rent - January 2026"
+            date="Jan 5, 2026"
+            amount="₹25,000"
+            method="Razorpay (Online)"
+            hash="0xc8f...a92b"
+            index={4}
+          />
+          <TransactionCard 
+            title="Utility Bill - Electricity"
+            date="Jan 15, 2026"
+            amount="₹3,450"
+            method="Razorpay (Online)"
+            hash="0xd1e...f34a"
+            index={5}
+          />
         </View>
 
         <View style={{ height: 100 }} />
@@ -70,7 +94,7 @@ function TransactionCard({ title, date, amount, method, hash, index }: any) {
           </View>
           <View style={styles.details}>
             <Text style={styles.titleText}>{title}</Text>
-            <Text style={styles.dateText}>{date} • {method}</Text>
+            <Text style={styles.dateText}>{date}</Text>
           </View>
           <Text style={styles.amountText}>{amount}</Text>
         </View>

@@ -23,9 +23,7 @@ export default function PropertyDetailsScreen() {
       
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
-        </TouchableOpacity>
+        <View style={{ width: 24 }} />
         <Text style={styles.headerTitle}>Property Details</Text>
         <TouchableOpacity>
           <Ionicons name="ellipsis-horizontal" size={24} color={Colors.textPrimary} />

@@ -29,14 +29,6 @@ export default function HomeScreen() {
             <Ionicons name="chevron-down" size={16} color={Colors.textPrimary} style={{ marginLeft: 6 }} />
           </View>
         </View>
-        <TouchableOpacity 
-          onPress={() => router.push("/workspace" as any)}
-          activeOpacity={0.8}
-        >
-          <View style={styles.avatar}>
-            <Ionicons name="person" size={24} color={Colors.accent} />
-          </View>
-        </TouchableOpacity>
       </View>
 
       <ScrollView 
@@ -119,18 +111,21 @@ export default function HomeScreen() {
           />
         </View>
 
-        <View style={{ height: 100 }} />
+        <View style={{ height: 40 }} />
+
+        {/* Action Button - Pay Rent (Now Scrollable) */}
+        <TouchableOpacity 
+          style={styles.payBtn} 
+          activeOpacity={0.9}
+          onPress={() => router.push("/pay-rent" as any)}
+        >
+          <Ionicons name="wallet-outline" size={24} color={Colors.white} />
+          <Text style={styles.payBtnText}>Pay Rent</Text>
+        </TouchableOpacity>
+
+        <View style={{ height: 60 }} />
       </ScrollView>
 
-      {/* Floating Action Button - Pay Rent */}
-      <TouchableOpacity 
-        style={styles.fab} 
-        activeOpacity={0.9}
-        onPress={() => router.push("/pay-rent" as any)}
-      >
-        <Ionicons name="wallet-outline" size={24} color={Colors.white} />
-        <Text style={styles.fabText}>Pay Rent</Text>
-      </TouchableOpacity>
     </SafeAreaView>
   );
 }
@@ -361,11 +356,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "800",
   },
-  fab: {
-    position: "absolute",
-    bottom: 30,
-    right: 24,
-    left: 24,
+  payBtn: {
     backgroundColor: Colors.accent,
     height: 60,
     borderRadius: Radius.m,
@@ -378,7 +369,7 @@ const styles = StyleSheet.create({
     shadowRadius: 20,
     elevation: 8,
   },
-  fabText: {
+  payBtnText: {
     color: Colors.white,
     fontSize: 16,
     fontWeight: "bold",

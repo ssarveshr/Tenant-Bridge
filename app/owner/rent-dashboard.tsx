@@ -1,17 +1,18 @@
-import React from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  SafeAreaView,
-  StatusBar,
-} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { Colors, Spacing, Radius } from "../../constants/Theme";
+import React, { useState } from "react";
+import {
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  Alert,
+} from "react-native";
 import Animated, { FadeInUp } from "react-native-reanimated";
+import { Colors, Radius, Spacing } from "../../constants/Theme";
 
 // Mock data sorted by due date
 const propertiesData = [
@@ -49,26 +50,35 @@ const propertiesData = [
 
 export default function RentDashboardScreen() {
   const router = useRouter();
+  const [requestedIds, setRequestedIds] = useState<string[]>([]);
+
+  const handleRequest = (id: string, tenant: string) => {
+    if (requestedIds.includes(id)) return;
+    
+    Alert.alert(
+      "Request Sent",
+      `A request payment is done to ${tenant}.`
+    );
+    setRequestedIds([...requestedIds, id]);
+  };
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
-      
+
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
-        </TouchableOpacity>
+        <View style={{ width: 44 }} />
         <Text style={styles.headerTitle}>Rent Dashboard</Text>
         <View style={{ width: 44 }} />
       </View>
 
-      <ScrollView 
+      <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
         {/* Overall Summary Card */}
-        <Animated.View 
+        <Animated.View
           entering={FadeInUp.delay(100).duration(500)}
           style={styles.summaryCard}
         >
@@ -87,7 +97,7 @@ export default function RentDashboardScreen() {
 
         {/* Property List Sorted by Due Date */}
         {propertiesData.map((prop, index) => (
-          <Animated.View 
+          <Animated.View
             key={prop.id}
             entering={FadeInUp.delay(200 + index * 100).duration(500)}
             style={styles.rentCard}
@@ -110,10 +120,10 @@ export default function RentDashboardScreen() {
                 <Text style={styles.footerValue}>{prop.rent}</Text>
               </View>
               <View style={styles.dueDateContainer}>
-                <Ionicons 
-                  name="calendar-outline" 
-                  size={14} 
-                  color={prop.status === "Due" ? Colors.danger : Colors.textSecondary} 
+                <Ionicons
+                  name="calendar-outline"
+                  size={14}
+                  color={prop.status === "Due" ? Colors.danger : Colors.textSecondary}
                 />
                 <Text style={[styles.dueDateText, prop.status === "Due" && { color: Colors.danger }]}>
                   Due: {prop.dueDate}
@@ -127,9 +137,25 @@ export default function RentDashboardScreen() {
                   <Ionicons name="time-outline" size={16} color="#D97706" />
                   <Text style={styles.alertText}>In {prop.daysLeft} days</Text>
                 </View>
-                <TouchableOpacity style={styles.requestBtn}>
-                  <Ionicons name="paper-plane" size={14} color={Colors.white} />
-                  <Text style={styles.requestBtnText}>Request Payment</Text>
+                <TouchableOpacity 
+                  style={[
+                    styles.requestBtn, 
+                    requestedIds.includes(prop.id) && { backgroundColor: Colors.border }
+                  ]}
+                  onPress={() => handleRequest(prop.id, prop.tenant)}
+                  disabled={requestedIds.includes(prop.id)}
+                >
+                  <Ionicons 
+                    name={requestedIds.includes(prop.id) ? "checkmark-circle" : "paper-plane"} 
+                    size={14} 
+                    color={requestedIds.includes(prop.id) ? Colors.success : Colors.white} 
+                  />
+                  <Text style={[
+                    styles.requestBtnText,
+                    requestedIds.includes(prop.id) && { color: Colors.textSecondary }
+                  ]}>
+                    {requestedIds.includes(prop.id) ? "Requested" : "Request Payment"}
+                  </Text>
                 </TouchableOpacity>
               </View>
             )}

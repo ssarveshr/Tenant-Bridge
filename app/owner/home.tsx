@@ -18,15 +18,6 @@ export default function OwnerHomeScreen() {
 
   const notifications = [
     {
-      id: "1",
-      title: "1 Offline Receipt Uploaded",
-      desc: "Verify ₹25,000 payment from John Doe",
-      icon: "receipt-outline",
-      btnText: "Verify",
-      type: "payment",
-      route: "/owner/verify-payment",
-    },
-    {
       id: "2",
       title: "New Dispute Raised",
       desc: "Tenant Sarah filed a dispute for 'Sunshine Apt'",

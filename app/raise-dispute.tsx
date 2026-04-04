@@ -25,9 +25,7 @@ export default function RaiseDisputeScreen() {
       <StatusBar barStyle="dark-content" />
       
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="close" size={28} color={Colors.textPrimary} />
-        </TouchableOpacity>
+        <View style={{ width: 28 }} />
         <Text style={styles.headerTitle}>Raise New Dispute</Text>
         <View style={{ width: 28 }} />
       </View>

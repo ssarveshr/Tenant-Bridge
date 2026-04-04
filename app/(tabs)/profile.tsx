@@ -71,10 +71,21 @@ export default function ProfileScreen() {
 
         {/* Settings Group */}
         <View style={styles.settingsGroup}>
-          <SettingItem icon="document-text-outline" label="My Agreements" />
-          <SettingItem icon="card-outline" label="Payment Methods" />
-          <SettingItem icon="notifications-outline" label="Push Notifications" />
-          <SettingItem icon="shield-checkmark-outline" label="Switch to Owner View" color={Colors.accent} />
+          <SettingItem 
+            icon="document-text-outline" 
+            label="My Agreements" 
+            onPress={() => router.push("/my-agreements" as any)} 
+          />
+          <SettingItem 
+            icon="card-outline" 
+            label="Payment Methods" 
+            onPress={() => router.push("/payment-methods" as any)} 
+          />
+          <SettingItem 
+            icon="notifications-outline" 
+            label="Push Notifications" 
+            onPress={() => router.push("/notification-settings" as any)} 
+          />
         </View>
 
         <TouchableOpacity 
@@ -96,9 +107,9 @@ export default function ProfileScreen() {
   );
 }
 
-function SettingItem({ icon, label, color = Colors.textPrimary }: any) {
+function SettingItem({ icon, label, color = Colors.textPrimary, onPress }: any) {
   return (
-    <TouchableOpacity style={styles.settingItem} activeOpacity={0.6}>
+    <TouchableOpacity style={styles.settingItem} activeOpacity={0.6} onPress={onPress}>
       <View style={styles.settingLeft}>
         <Ionicons name={icon} size={22} color={color} />
         <Text style={[styles.settingLabel, { color }]}>{label}</Text>

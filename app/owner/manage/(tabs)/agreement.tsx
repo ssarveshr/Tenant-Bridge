@@ -23,8 +23,8 @@ export default function OwnerManageAgreementScreen() {
       
       <View style={styles.header}>
         <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle}>Digital Agreement Intelligence</Text>
-          <Text style={styles.headerSubtitle}>Shared Source of Truth</Text>
+          <Text style={styles.headerTitle}>Digital Agreement</Text>
+          <Text style={styles.headerSubtitle}>Legal Source of Truth</Text>
         </View>
         <TouchableOpacity onPress={() => router.push("/owner/upload-agreement" as any)}>
           <Ionicons name="cloud-upload-outline" size={24} color={Colors.accent} />
@@ -36,19 +36,23 @@ export default function OwnerManageAgreementScreen() {
         contentContainerStyle={styles.scrollContent}
       >
         <Animated.View entering={FadeIn.duration(400)}>
-          <Text style={styles.sectionTitle}>Shared Multi-Clause Contract</Text>
+          <Text style={styles.sectionTitle}>Uploaded Agreement</Text>
           <View style={styles.agreementDoc}>
-            <Text style={styles.docText}>
-              {"\n"}
-              This Rental Agreement is made on Jan 1, 2026...
-              {"\n\n"}
-              <Text style={styles.highlight}>Clause 4.1: Monthly Rent Payment</Text>
-              {"\n"}
-              The Tenant shall pay a monthly rent of ₹25,000 on or before the 5th of every month.
-              {"\n\n"}
-              <Text style={styles.highlight}>Clause 7.2: Maintenance Responsibilities</Text>
-              {"\n"}
-              Minor repairs under ₹1,000 are the responsibility of the tenant.
+            <View style={styles.docInfo}>
+              <Ionicons name="document-attach" size={24} color={Colors.accent} />
+              <View style={{ marginLeft: 12 }}>
+                <Text style={styles.fileName}>Sunshine_Apts_Lease.pdf</Text>
+                <Text style={styles.fileSize}>2.4 MB • Uploaded Mar 1, 2026</Text>
+              </View>
+            </View>
+            <View style={styles.divider} />
+            <Text style={styles.docPreviewHeader}>AI-Generated Summary</Text>
+            <Text style={styles.docSummaryText}>
+              • Monthly rent fixed at ₹25,000.{"\n"}
+              • Lease tenure is 12 months with a 2-month notice period.{"\n"}
+              • Tenant responsible for electricity and water utility bills.{"\n"}
+              • Security deposit of ₹75,000 held by the owner.{"\n"}
+              • Standard 10% rent increment applicable upon renewal.
             </Text>
           </View>
 
@@ -133,16 +137,39 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     marginBottom: Spacing.xl,
   },
-  docText: {
-    fontSize: 14,
-    color: "#334155",
-    lineHeight: 24,
-    fontFamily: Platform.OS === "ios" ? "Georgia" : "serif",
+  docInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
   },
-  highlight: {
+  fileName: {
+    fontSize: 16,
     fontWeight: "800",
-    color: Colors.accent,
-    backgroundColor: "#EFF6FF",
+    color: Colors.textPrimary,
+  },
+  fileSize: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    fontWeight: "600",
+  },
+  docPreviewHeader: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: Colors.textPrimary,
+    marginBottom: 10,
+    textTransform: "uppercase",
+  },
+  docSummaryText: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    lineHeight: 22,
+    fontWeight: "500",
+  },
+  divider: {
+    height: 1,
+    backgroundColor: Colors.border,
+    width: "100%",
+    marginVertical: 16,
   },
   aiLabel: {
     fontSize: 16,

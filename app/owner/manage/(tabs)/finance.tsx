@@ -29,22 +29,6 @@ export default function OwnerManageFinanceScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        <Text style={styles.sectionTitle}>Verification Needed</Text>
-        <Animated.View entering={FadeInDown.duration(500)} style={styles.attentionCard}>
-          <View style={styles.iconBox}>
-            <Ionicons name="camera-outline" size={24} color={Colors.warning} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.attTitle}>Offline Receipt Uploaded</Text>
-            <Text style={styles.attDesc}>Verify March Rent from John Doe</Text>
-          </View>
-          <TouchableOpacity 
-            style={styles.verifyBtn}
-            onPress={() => router.push("/owner/verify-payment" as any)}
-          >
-            <Text style={styles.verifyText}>Verify</Text>
-          </TouchableOpacity>
-        </Animated.View>
 
         <Text style={styles.sectionTitle}>Unit History</Text>
         <View style={styles.list}>
@@ -76,7 +60,7 @@ export default function OwnerManageFinanceScreen() {
         onPress={() => console.log("Ledger PDF Exported")}
       >
         <Ionicons name="download-outline" size={24} color={Colors.white} />
-        <Text style={styles.fabText}>Export Ledger</Text>
+        <Text style={styles.fabText}>Export Transaction Details</Text>
       </TouchableOpacity>
     </SafeAreaView>
   );
@@ -89,7 +73,7 @@ function HistoryCard({ title, date, amount, method, status, index }: any) {
         <View style={styles.cardTop}>
           <View style={styles.details}>
             <Text style={styles.titleText}>{title}</Text>
-            <Text style={styles.dateText}>{date} • {method}</Text>
+            <Text style={styles.dateText}>{date}</Text>
           </View>
           <Text style={styles.amountText}>{amount}</Text>
         </View>

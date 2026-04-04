@@ -15,16 +15,15 @@ import Animated, { FadeInUp, FadeIn } from "react-native-reanimated";
 
 export default function UploadAgreementScreen() {
   const router = useRouter();
+  const [step, setStep] = useState(1);
   const [isUploading, setIsUploading] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
 
-  const handleUpload = () => {
+  const nextStep = () => {
     setIsUploading(true);
-    // Mock upload and AI parsing
     setTimeout(() => {
       setIsUploading(false);
-      setIsSuccess(true);
-    }, 3000);
+      setStep(step + 1);
+    }, 2000);
   };
 
   return (
@@ -32,9 +31,7 @@ export default function UploadAgreementScreen() {
       <StatusBar barStyle="dark-content" />
       
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="close" size={28} color={Colors.textPrimary} />
-        </TouchableOpacity>
+        <View style={{ width: 28 }} />
         <Text style={styles.headerTitle}>Digital Agreement</Text>
         <View style={{ width: 28 }} />
       </View>
@@ -43,66 +40,100 @@ export default function UploadAgreementScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        <Text style={styles.sectionTitle}>Source of Truth</Text>
-        <Text style={styles.sectionDesc}>
-          Upload the signed lease document for AI parsing and shared access.
-        </Text>
+        {/* Progress Indicator */}
+        <View style={styles.stepsContainer}>
+          <View style={[styles.stepDot, step >= 1 && styles.stepDotActive]} />
+          <View style={styles.stepLine} />
+          <View style={[styles.stepDot, step >= 2 && styles.stepDotActive]} />
+          <View style={styles.stepLine} />
+          <View style={[styles.stepDot, step >= 3 && styles.stepDotActive]} />
+        </View>
 
-        {!isSuccess ? (
-          <View>
+        {step === 1 && (
+          <Animated.View entering={FadeInUp}>
+            <Text style={styles.sectionTitle}>Step 1: Main Agreement</Text>
+            <Text style={styles.sectionDesc}>
+              Upload the primary signed lease document. AI will scan for core terms.
+            </Text>
+            
             <TouchableOpacity 
               style={styles.dropZone} 
-              onPress={handleUpload}
+              onPress={nextStep}
               disabled={isUploading}
             >
               <View style={styles.iconCircle}>
                 <Ionicons 
-                  name={isUploading ? "sync" : "cloud-upload"} 
+                  name={isUploading ? "sync" : "document-text"} 
                   size={48} 
                   color={Colors.accent} 
                 />
               </View>
               <Text style={styles.dropZoneTitle}>
-                {isUploading ? "AI Extracting Intelligence..." : "Choose File or Photo"}
+                {isUploading ? "Extracting Clauses..." : "Upload Main Contract"}
               </Text>
-              <Text style={styles.dropZoneSubtitle}>PDF, PNG, JPG (Max 10MB)</Text>
+              <Text style={styles.dropZoneSubtitle}>PDF format preferred</Text>
             </TouchableOpacity>
+          </Animated.View>
+        )}
 
-            <View style={styles.advantageList}>
-              <AdvantageItem 
-                icon="analytics-outline" 
-                title="AI Clause Extraction" 
-                desc="We'll automatically extract rent, dates, and responsibilities." 
-              />
-              <AdvantageItem 
-                icon="shield-checkmark-outline" 
-                title="Immutable proof" 
-                desc="Agreement metadata is recorded on the blockchain." 
-              />
-            </View>
-          </View>
-        ) : (
-          <Animated.View entering={FadeIn.duration(500)} style={styles.successArea}>
-            <View style={[styles.iconCircle, { backgroundColor: "#ECFDF5" }]}>
-              <Ionicons name="checkmark-circle" size={56} color={Colors.success} />
-            </View>
-            <Text style={styles.successTitle}>Intelligence Extracted</Text>
-            <Text style={styles.successDesc}>
-              The digital agreement is now live and shared with your tenant.
+        {step === 2 && (
+          <Animated.View entering={FadeInUp}>
+            <Text style={styles.sectionTitle}>Step 2: Additional Pages</Text>
+            <Text style={styles.sectionDesc}>
+              Add any supporting documents, addenda, or ID proofs associated with this lease.
             </Text>
-
-            <View style={styles.summaryCard}>
-              <SummaryRow label="Rent Amount" value="₹25,000/mo" />
-              <SummaryRow label="Due Date" value="Every 5th" />
-              <SummaryRow label="Security" value="₹75,000" />
-            </View>
+            
+            <TouchableOpacity 
+              style={styles.dropZone} 
+              onPress={nextStep}
+              disabled={isUploading}
+            >
+              <View style={styles.iconCircle}>
+                <Ionicons 
+                  name={isUploading ? "sync" : "add-circle"} 
+                  size={48} 
+                  color={Colors.success} 
+                />
+              </View>
+              <Text style={styles.dropZoneTitle}>
+                {isUploading ? "Analyzing Addenda..." : "Upload Extra Pages"}
+              </Text>
+              <Text style={styles.dropZoneSubtitle}>Photos or Scans of annexures</Text>
+            </TouchableOpacity>
 
             <TouchableOpacity 
-              style={styles.primaryBtn}
-              onPress={() => router.replace("/owner/home" as any)}
+              style={styles.skipBtn}
+              onPress={() => setStep(3)}
             >
-              <Text style={styles.primaryBtnText}>View Property Workspace</Text>
+              <Text style={styles.skipText}>No additional pages? Skip Step</Text>
             </TouchableOpacity>
+          </Animated.View>
+        )}
+
+        {step === 3 && (
+          <Animated.View entering={FadeIn}>
+            <View style={styles.successArea}>
+              <View style={[styles.iconCircle, { backgroundColor: "#ECFDF5" }]}>
+                <Ionicons name="checkmark-circle" size={56} color={Colors.success} />
+              </View>
+              <Text style={styles.successTitle}>Intelligence Unified</Text>
+              <Text style={styles.successDesc}>
+                All contract pages have been unified, verified, and recorded on the blockchain.
+              </Text>
+
+              <View style={styles.summaryCard}>
+                <SummaryRow label="Pages Processed" value="4 Pages" />
+                <SummaryRow label="Integrity Status" value="100% Verified" />
+                <SummaryRow label="Blockchain Meta" value="Recorded" />
+              </View>
+
+              <TouchableOpacity 
+                style={styles.primaryBtn}
+                onPress={() => router.replace("/owner/manage/(tabs)/home" as any)}
+              >
+                <Text style={styles.primaryBtnText}>Return to Dashboard</Text>
+              </TouchableOpacity>
+            </View>
           </Animated.View>
         )}
 
@@ -167,6 +198,41 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     lineHeight: 22,
     marginBottom: Spacing.xxl,
+  },
+  stepsContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 40,
+    marginTop: -Spacing.m,
+  },
+  stepDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: Colors.border,
+    backgroundColor: Colors.white,
+  },
+  stepDotActive: {
+    borderColor: Colors.accent,
+    backgroundColor: Colors.accent,
+  },
+  stepLine: {
+    width: 40,
+    height: 2,
+    backgroundColor: Colors.border,
+    marginHorizontal: 8,
+  },
+  skipBtn: {
+    marginTop: 20,
+    alignItems: "center",
+  },
+  skipText: {
+    color: Colors.textSecondary,
+    fontSize: 14,
+    fontWeight: "700",
+    textDecorationLine: "underline",
   },
   dropZone: {
     backgroundColor: Colors.white,

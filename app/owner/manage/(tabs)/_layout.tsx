@@ -54,7 +54,7 @@ export default function OwnerManageLayout() {
       <Tabs.Screen
         name="agreement"
         options={{
-          title: "Workspace",
+          title: "Agreement",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="document-text" size={size} color={color} />
           ),

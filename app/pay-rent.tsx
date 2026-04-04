@@ -20,9 +20,7 @@ export default function PayRentScreen() {
       <StatusBar barStyle="dark-content" />
       
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
-        </TouchableOpacity>
+        <View style={{ width: 24 }} />
         <Text style={styles.headerTitle}>Pay Rent</Text>
         <View style={{ width: 24 }} />
       </View>
@@ -36,7 +34,11 @@ export default function PayRentScreen() {
 
         <Text style={styles.sectionTitle}>Select Payment Method</Text>
         
-        <TouchableOpacity style={styles.methodCard} activeOpacity={0.8}>
+        <TouchableOpacity 
+          style={styles.methodCard} 
+          activeOpacity={0.8}
+          onPress={() => router.push("/online-payment" as any)}
+        >
           <View style={styles.iconBox}>
             <Ionicons name="card-outline" size={28} color={Colors.accent} />
           </View>
@@ -47,20 +49,6 @@ export default function PayRentScreen() {
           <Ionicons name="chevron-forward" size={24} color={Colors.border} />
         </TouchableOpacity>
 
-        <TouchableOpacity 
-          style={[styles.methodCard, { marginTop: Spacing.m }]} 
-          activeOpacity={0.8}
-          onPress={() => console.log("Offline Flow Started")}
-        >
-          <View style={[styles.iconBox, { backgroundColor: "#F0FDF4" }]}>
-            <Ionicons name="camera-outline" size={28} color={Colors.success} />
-          </View>
-          <View style={styles.methodInfo}>
-            <Text style={styles.methodTitle}>Record Offline Payment</Text>
-            <Text style={styles.methodDesc}>Upload receipt for verification</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={24} color={Colors.border} />
-        </TouchableOpacity>
 
         <View style={styles.payoutPolicy}>
           <Ionicons name="shield-checkmark-outline" size={20} color={Colors.textSecondary} />

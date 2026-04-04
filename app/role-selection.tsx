@@ -1,16 +1,16 @@
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import React from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
   SafeAreaView,
   StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { useRouter } from "expo-router";
-import { Colors, Spacing, Radius } from "../constants/Theme";
-import { Ionicons } from "@expo/vector-icons";
 import Animated, { FadeInUp } from "react-native-reanimated";
+import { Colors, Radius, Spacing } from "../constants/Theme";
 
 export default function RoleSelection() {
   const router = useRouter();
@@ -28,8 +28,8 @@ export default function RoleSelection() {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
       <View style={styles.content}>
-        <Animated.View 
-          entering={FadeInUp.delay(100).duration(500)} 
+        <Animated.View
+          entering={FadeInUp.delay(100).duration(500)}
           style={styles.header}
         >
           <Text style={styles.title}>Choose your role</Text>
@@ -37,16 +37,16 @@ export default function RoleSelection() {
         </Animated.View>
 
         <View style={styles.roleGrid}>
-          <RoleCard 
-            icon="person-outline" 
-            title="Tenant" 
+          <RoleCard
+            icon="person-outline"
+            title="Tenant"
             desc="Move in, pay rent, resolve disputes, and track agreements."
             onPress={() => handleRoleSelect("tenant")}
             delay={200}
           />
-          <RoleCard 
-            icon="home-outline" 
-            title="House Owner" 
+          <RoleCard
+            icon="home-outline"
+            title="House Owner"
             desc="Manage properties, verify payments, and handle tenant issues."
             onPress={() => handleRoleSelect("owner")}
             delay={300}
@@ -64,8 +64,8 @@ export default function RoleSelection() {
 function RoleCard({ icon, title, desc, onPress, delay }: any) {
   return (
     <Animated.View entering={FadeInUp.delay(delay).duration(600)}>
-      <TouchableOpacity 
-        style={styles.card} 
+      <TouchableOpacity
+        style={styles.card}
         onPress={onPress}
         activeOpacity={0.7}
       >
@@ -94,6 +94,17 @@ const styles = StyleSheet.create({
   },
   header: {
     marginBottom: Spacing.xxl,
+  },
+  backBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: Colors.white,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: Colors.border,
+    marginBottom: 20,
   },
   title: {
     fontSize: 28,
