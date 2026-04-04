@@ -110,9 +110,7 @@ export default function PayRentScreen() {
       <StatusBar barStyle="dark-content" />
       
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} disabled={isLoading}>
-          <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
-        </TouchableOpacity>
+        <View style={{ width: 24 }} />
         <Text style={styles.headerTitle}>Pay Rent</Text>
         <View style={{ width: 24 }} />
       </View>

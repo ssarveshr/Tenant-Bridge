@@ -90,19 +90,19 @@ export default function OwnerManageHomeScreen() {
           />
           <ManageGridCard 
             icon="reader-outline" 
-            label="Intelligence" 
+            label="Agreement" 
             value="AI Active" 
             delay={400}
             color="#10B981"
             onPress={() => router.push("/owner/manage/(tabs)/agreement" as any)}
           />
           <ManageGridCard 
-            icon="chatbubbles-outline" 
-            label="Property Chat" 
-            value="1 Unread" 
+            icon="star-outline" 
+            label="Trust Score" 
+            value="100/100" 
             delay={500}
             color="#F59E0B"
-            onPress={() => router.push("/chat" as any)}
+            onPress={() => router.push("/credit-score" as any)}
           />
         </View>
 

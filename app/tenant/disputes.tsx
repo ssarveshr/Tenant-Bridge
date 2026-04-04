@@ -10,8 +10,11 @@ import {
   View,
 } from "react-native";
 
+import { useLanguage } from "../../hooks/useLanguage";
+
 export default function DisputesScreen() {
   const router = useRouter();
+  const { t } = useLanguage();
 
   const navigateTo = (path: string) => {
     router.push(path as any);
@@ -27,24 +30,28 @@ export default function DisputesScreen() {
       >
         {/* Header Section */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Disputes</Text>
-          <Text style={styles.headerSubtitle}>Manage and resolve conflicts</Text>
+          <Text style={styles.headerTitle}>{t('disputes')}</Text>
+          <Text style={styles.headerSubtitle}>{t('manageConflicts')}</Text>
         </View>
 
         <View style={styles.contentBody}>
           {/* Raise New Dispute Card */}
-          <TouchableOpacity style={styles.raiseCard} activeOpacity={0.8}>
+          <TouchableOpacity 
+            style={styles.raiseCard} 
+            activeOpacity={0.8}
+            onPress={() => router.push("/raise-dispute")}
+          >
             <View style={styles.raiseIconContainer}>
               <Ionicons name="add" size={32} color="#ff7c00" />
             </View>
             <View style={styles.raiseTextContainer}>
-              <Text style={styles.raiseTitle}>Raise New Dispute</Text>
-              <Text style={styles.raiseSubtitle}>Report an issue with AI-powered analysis</Text>
+              <Text style={styles.raiseTitle}>{t('raiseNewDispute')}</Text>
+              <Text style={styles.raiseSubtitle}>{t('reportWithAi')}</Text>
             </View>
           </TouchableOpacity>
 
           {/* Active Disputes Section */}
-          <Text style={styles.sectionTitle}>Active Disputes</Text>
+          <Text style={styles.sectionTitle}>{t('activeDisputes')}</Text>
           <View style={styles.disputeCard}>
             <View style={styles.cardHeader}>
               <View style={[styles.disputeIconContainer, { backgroundColor: "#fff4e6" }]}>
@@ -55,20 +62,20 @@ export default function DisputesScreen() {
                 <Text style={styles.disputeDesc}>Ceiling leak in bathroom causing damage</Text>
               </View>
               <View style={styles.statusBadgePending}>
-                <Text style={styles.statusTextPending}>Pending</Text>
+                <Text style={styles.statusTextPending}>{t('pending')}</Text>
               </View>
             </View>
 
             <View style={styles.cardFooter}>
-              <Text style={styles.dateText}>Created: Mar 28, 2026</Text>
+              <Text style={styles.dateText}>{t('created')}: Mar 28, 2026</Text>
               <View style={styles.tagBadge}>
-                <Text style={styles.tagText}>maintenance</Text>
+                <Text style={styles.tagText}>{t('maintenanceTag')}</Text>
               </View>
             </View>
           </View>
 
           {/* Past Disputes Section */}
-          <Text style={styles.sectionTitle}>Past Disputes</Text>
+          <Text style={styles.sectionTitle}>{t('pastDisputes') || t('disputes')}</Text>
           <View style={styles.disputeCard}>
             <View style={styles.cardHeader}>
               <View style={[styles.disputeIconContainer, { backgroundColor: "#e6f9f0" }]}>
@@ -79,14 +86,14 @@ export default function DisputesScreen() {
                 <Text style={styles.disputeDesc}>Payment delayed due to bank issues</Text>
               </View>
               <View style={styles.statusBadgeResolved}>
-                <Text style={styles.statusTextResolved}>Resolved</Text>
+                <Text style={styles.statusTextResolved}>{t('resolved')}</Text>
               </View>
             </View>
 
             <View style={styles.cardFooter}>
               <View>
-                <Text style={styles.dateText}>Created: Feb 15, 2026</Text>
-                <Text style={[styles.dateText, { marginTop: 2 }]}>Resolved: Feb 18, 2026</Text>
+                <Text style={styles.dateText}>{t('created')}: Feb 15, 2026</Text>
+                <Text style={[styles.dateText, { marginTop: 2 }]}>{t('resolved')}: Feb 18, 2026</Text>
               </View>
             </View>
           </View>
@@ -98,11 +105,11 @@ export default function DisputesScreen() {
 
       {/* Bottom Tab Bar */}
       <View style={styles.tabBar}>
-        <TabItem icon="home-outline" label="Dashboard" onPress={() => navigateTo("/tenant/dashboard")} />
-        <TabItem icon="document-text-outline" label="Agreements" onPress={() => navigateTo("/tenant/agreements")} />
-        <TabItem icon="wallet-outline" label="Payments" onPress={() => navigateTo("/tenant/payments")} />
-        <TabItem icon="alert-circle" label="Disputes" active />
-        <TabItem icon="person-outline" label="Profile" />
+        <TabItem icon="home-outline" label={t('dashboard')} onPress={() => navigateTo("/tenant/dashboard")} />
+        <TabItem icon="document-text-outline" label={t('agreements')} onPress={() => navigateTo("/tenant/agreements")} />
+        <TabItem icon="wallet-outline" label={t('payments')} onPress={() => navigateTo("/tenant/payments")} />
+        <TabItem icon="alert-circle" label={t('disputes')} active />
+        <TabItem icon="person-outline" label={t('profile')} onPress={() => navigateTo("/tenant/profile")} />
       </View>
     </View>
   );

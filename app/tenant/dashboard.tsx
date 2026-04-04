@@ -10,8 +10,16 @@ import {
   View
 } from "react-native";
 
+import { useLanguage } from "../../hooks/useLanguage";
+
 export default function TenantDashboard() {
   const router = useRouter();
+  const { t, n } = useLanguage();
+
+  const navigateTo = (path: string) => {
+    router.push(path as any);
+  };
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
@@ -24,10 +32,13 @@ export default function TenantDashboard() {
         <View style={styles.header}>
           <View style={styles.headerTop}>
             <View>
-              <Text style={styles.welcomeText}>Welcome back,</Text>
+              <Text style={styles.welcomeText}>{t('welcomeBack')}</Text>
               <Text style={styles.userName}>Demo User</Text>
             </View>
-            <TouchableOpacity style={styles.notificationBtn}>
+            <TouchableOpacity 
+              style={styles.notificationBtn}
+              onPress={() => router.push("/notification-settings" as any)}
+            >
               <Ionicons name="notifications-outline" size={24} color="#fff" />
             </TouchableOpacity>
           </View>
@@ -35,7 +46,7 @@ export default function TenantDashboard() {
           <View style={styles.infoBadgeRow}>
             <View style={styles.tenantBadge}>
               <Ionicons name="home" size={12} color="#fff" />
-              <Text style={styles.tenantBadgeText}>Tenant</Text>
+              <Text style={styles.tenantBadgeText}>{t('tenantLogo')}</Text>
             </View>
             <Text style={styles.addressText}>Sunshine Apartments, Flat 402</Text>
           </View>
@@ -49,9 +60,9 @@ export default function TenantDashboard() {
                 <Ionicons name="wallet-outline" size={24} color="#1a56f0" />
               </View>
               <View>
-                <Text style={styles.statLabel}>Rent Due</Text>
-                <Text style={styles.statValue}>₹25,000</Text>
-                <Text style={styles.statSubText}>April 5, 2026</Text>
+                <Text style={styles.statLabel}>{t('rentDue')}</Text>
+                <Text style={styles.statValue}>₹{n('25,000')}</Text>
+                <Text style={styles.statSubText}>{n('April 5, 2026')}</Text>
               </View>
             </View>
 
@@ -60,80 +71,102 @@ export default function TenantDashboard() {
                 <MaterialCommunityIcons name="trending-up" size={24} color="#00c853" />
               </View>
               <View>
-                <Text style={styles.statLabel}>Credit Score</Text>
-                <Text style={styles.statValue}>780</Text>
-                <Text style={[styles.statValueDetail, { color: "#00c853" }]}>Excellent</Text>
+                <Text style={styles.statLabel}>{t('creditScore')}</Text>
+                <Text style={styles.statValue}>{n('780')}</Text>
+                <Text style={[styles.statValueDetail, { color: "#00c853" }]}>{t('excellent')}</Text>
               </View>
             </View>
           </View>
 
           {/* Full Width Status Cards */}
-          <TouchableOpacity style={styles.fullCard}>
+          <TouchableOpacity 
+            style={styles.fullCard}
+            onPress={() => navigateTo("/tenant/agreements")}
+          >
             <View style={styles.fullCardContent}>
               <View style={[styles.iconBox, { backgroundColor: "#e6f0ff" }]}>
                 <Ionicons name="document-text-outline" size={24} color="#1a56f0" />
               </View>
               <View style={styles.fullCardText}>
-                <Text style={styles.fullCardTitle}>Agreement Status</Text>
+                <Text style={styles.fullCardTitle}>{t('agreementStatus') || t('agreement')}</Text>
                 <View style={styles.statusRow}>
                   <Ionicons name="checkmark-circle" size={16} color="#00c853" />
-                  <Text style={styles.statusText}>Active</Text>
+                  <Text style={styles.statusText}>{t('active')}</Text>
                 </View>
               </View>
             </View>
             <Ionicons name="chevron-forward" size={20} color="#999" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.fullCard}>
+          <TouchableOpacity 
+            style={styles.fullCard}
+            onPress={() => navigateTo("/tenant/disputes")}
+          >
             <View style={styles.fullCardContent}>
               <View style={[styles.iconBox, { backgroundColor: "#fff4e6" }]}>
                 <Ionicons name="warning-outline" size={24} color="#ff7c00" />
               </View>
               <View style={styles.fullCardText}>
-                <Text style={styles.fullCardTitle}>Active Disputes</Text>
-                <Text style={styles.fullCardDesc}>No active disputes</Text>
+                <Text style={styles.fullCardTitle}>{t('activeDisputes')}</Text>
+                <Text style={styles.fullCardDesc}>{t('noActiveDisputes')}</Text>
               </View>
             </View>
             <Ionicons name="chevron-forward" size={20} color="#999" />
           </TouchableOpacity>
 
           {/* Quick Actions */}
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
+          <Text style={styles.sectionTitle}>{t('quickActions')}</Text>
           <View style={styles.quickActionRow}>
-            <TouchableOpacity style={[styles.actionBtn, { backgroundColor: "#1a56f0" }]}>
+            <TouchableOpacity 
+              style={[styles.actionBtn, { backgroundColor: "#1a56f0" }]}
+              onPress={() => navigateTo("/tenant/explore")}
+            >
               <View style={styles.actionIconCircle}>
-                <Ionicons name="wallet" size={28} color="#fff" />
+                <Ionicons name="search" size={28} color="#fff" />
               </View>
-              <Text style={styles.actionBtnText}>Pay Rent</Text>
+              <Text style={styles.actionBtnText}>Explore Properties</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={[styles.actionBtn, { backgroundColor: "#ff7c00" }]}>
+            <TouchableOpacity 
+              style={[styles.actionBtn, { backgroundColor: "#ff7c00" }]}
+              onPress={() => navigateTo("/raise-dispute")}
+            >
               <View style={styles.actionIconCircle}>
                 <Ionicons name="warning" size={28} color="#fff" />
               </View>
-              <Text style={styles.actionBtnText}>Raise Dispute</Text>
+              <Text style={styles.actionBtnText}>{t('raiseDispute')}</Text>
             </TouchableOpacity>
           </View>
+          
+          <TouchableOpacity 
+            style={[styles.actionBtn, { backgroundColor: "#059669", width: "100%", height: 80, flexDirection: "row", gap: 16, marginBottom: 16 }]}
+            onPress={() => navigateTo("/pay-rent")}
+          >
+            <View style={[styles.actionIconCircle, { marginBottom: 0, width: 44, height: 44 }]}>
+              <Ionicons name="wallet" size={20} color="#fff" />
+            </View>
+            <Text style={styles.actionBtnText}>{t('payRent')}</Text>
+          </TouchableOpacity>
 
           {/* Recent Activity */}
-          <Text style={styles.sectionTitle}>Recent Activity</Text>
+          <Text style={styles.sectionTitle}>{t('recentActivity')}</Text>
           <View style={styles.activityList}>
             <ActivityItem
               icon="checkmark-circle-outline"
-              title="Rent Paid"
-              date="Mar 5, 2026"
+              title={t('rentPaid')}
+              date={n("Mar 5, 2026")}
               color="#00c853"
             />
             <ActivityItem
               icon="document-text-outline"
-              title="Agreement Signed"
-              date="Jan 1, 2026"
+              title={t('agreementSigned')}
+              date={n("Jan 1, 2026")}
               color="#1a56f0"
             />
             <ActivityItem
               icon="checkmark-circle-outline"
-              title="Security Deposit"
-              date="Dec 28, 2025"
+              title={t('securityDeposit')}
+              date={n("Dec 28, 2025")}
               color="#00c853"
             />
           </View>
@@ -145,11 +178,11 @@ export default function TenantDashboard() {
 
       {/* Bottom Tab Bar */}
       <View style={styles.tabBar}>
-        <TabItem icon="home" label="Dashboard" active onPress={() => { }} />
-        <TabItem icon="document-text-outline" label="Agreements" onPress={() => router.push("/tenant/agreements" as any)} />
-        <TabItem icon="wallet-outline" label="Payments" onPress={() => router.push("/tenant/payments" as any)} />
-        <TabItem icon="alert-circle-outline" label="Disputes" onPress={() => router.push("/tenant/disputes" as any)} />
-        <TabItem icon="person-outline" label="Profile" />
+        <TabItem icon="home" label={t('dashboard')} active onPress={() => { }} />
+        <TabItem icon="document-text-outline" label={t('agreements')} onPress={() => router.push("/tenant/agreements" as any)} />
+        <TabItem icon="wallet-outline" label={t('payments')} onPress={() => router.push("/tenant/payments" as any)} />
+        <TabItem icon="alert-circle-outline" label={t('disputes')} onPress={() => router.push("/tenant/disputes" as any)} />
+        <TabItem icon="person-outline" label={t('profile')} onPress={() => navigateTo("/tenant/profile")} />
       </View>
     </View>
   );

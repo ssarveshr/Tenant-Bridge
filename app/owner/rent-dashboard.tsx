@@ -1,17 +1,18 @@
-import React from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  SafeAreaView,
-  StatusBar,
-} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { Colors, Spacing, Radius } from "../../constants/Theme";
+import React, { useState } from "react";
+import {
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  Alert,
+} from "react-native";
 import Animated, { FadeInUp } from "react-native-reanimated";
+import { Colors, Radius, Spacing } from "../../constants/Theme";
 
 // Mock data sorted by due date
 const propertiesData = [
@@ -47,47 +48,59 @@ const propertiesData = [
   },
 ];
 
+import { useLanguage } from "../../hooks/useLanguage";
+
 export default function RentDashboardScreen() {
   const router = useRouter();
+  const { t, n } = useLanguage();
+  const [requestedIds, setRequestedIds] = useState<string[]>([]);
+
+  const handleRequest = (id: string, tenant: string) => {
+    if (requestedIds.includes(id)) return;
+    
+    Alert.alert(
+      t('requestSent'),
+      `${t('requestSentMsg')} ${tenant}.`
+    );
+    setRequestedIds([...requestedIds, id]);
+  };
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
-      
+
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Rent Dashboard</Text>
+        <View style={{ width: 44 }} />
+        <Text style={styles.headerTitle}>{t('rentDashboard')}</Text>
         <View style={{ width: 44 }} />
       </View>
 
-      <ScrollView 
+      <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
         {/* Overall Summary Card */}
-        <Animated.View 
+        <Animated.View
           entering={FadeInUp.delay(100).duration(500)}
           style={styles.summaryCard}
         >
           <View style={styles.summaryItem}>
-            <Text style={styles.summaryLabel}>Total Monthly Rent</Text>
-            <Text style={styles.summaryValue}>₹78,500</Text>
+            <Text style={styles.summaryLabel}>{t('totalMonthlyRent')}</Text>
+            <Text style={styles.summaryValue}>₹{n('78,500')}</Text>
           </View>
           <View style={styles.summaryDivider} />
           <View style={styles.summaryItem}>
-            <Text style={styles.summaryLabel}>Received</Text>
-            <Text style={[styles.summaryValue, { color: Colors.success }]}>₹25,000</Text>
+            <Text style={styles.summaryLabel}>{t('received')}</Text>
+            <Text style={[styles.summaryValue, { color: Colors.success }]}>₹{n('25,000')}</Text>
           </View>
         </Animated.View>
 
-        <Text style={styles.sectionTitle}>Property Rent Details</Text>
+        <Text style={styles.sectionTitle}>{t('propertyRentDetails')}</Text>
 
         {/* Property List Sorted by Due Date */}
         {propertiesData.map((prop, index) => (
-          <Animated.View 
+          <Animated.View
             key={prop.id}
             entering={FadeInUp.delay(200 + index * 100).duration(500)}
             style={styles.rentCard}
@@ -99,24 +112,24 @@ export default function RentDashboardScreen() {
               </View>
               <View style={[styles.statusBadge, prop.status === "Received" ? styles.paidBadge : styles.dueBadge]}>
                 <Text style={[styles.statusText, prop.status === "Received" ? styles.paidText : styles.dueText]}>
-                  {prop.status}
+                  {prop.status === "Received" ? t('received') : t('due')}
                 </Text>
               </View>
             </View>
 
             <View style={styles.cardFooter}>
               <View>
-                <Text style={styles.footerLabel}>Monthly Rent</Text>
-                <Text style={styles.footerValue}>{prop.rent}</Text>
+                <Text style={styles.footerLabel}>{t('monthlyRent')}</Text>
+                <Text style={styles.footerValue}>{n(prop.rent)}</Text>
               </View>
               <View style={styles.dueDateContainer}>
-                <Ionicons 
-                  name="calendar-outline" 
-                  size={14} 
-                  color={prop.status === "Due" ? Colors.danger : Colors.textSecondary} 
+                <Ionicons
+                  name="calendar-outline"
+                  size={14}
+                  color={prop.status === "Due" ? Colors.danger : Colors.textSecondary}
                 />
                 <Text style={[styles.dueDateText, prop.status === "Due" && { color: Colors.danger }]}>
-                  Due: {prop.dueDate}
+                  {t('due')}: {n(prop.dueDate)}
                 </Text>
               </View>
             </View>
@@ -125,11 +138,27 @@ export default function RentDashboardScreen() {
               <View style={styles.actionRow}>
                 <View style={styles.alertContainer}>
                   <Ionicons name="time-outline" size={16} color="#D97706" />
-                  <Text style={styles.alertText}>In {prop.daysLeft} days</Text>
+                  <Text style={styles.alertText}>{t('inDays')} {n(prop.daysLeft)} {t('daysLeft')}</Text>
                 </View>
-                <TouchableOpacity style={styles.requestBtn}>
-                  <Ionicons name="paper-plane" size={14} color={Colors.white} />
-                  <Text style={styles.requestBtnText}>Request Payment</Text>
+                <TouchableOpacity 
+                  style={[
+                    styles.requestBtn, 
+                    requestedIds.includes(prop.id) && { backgroundColor: Colors.border }
+                  ]}
+                  onPress={() => handleRequest(prop.id, prop.tenant)}
+                  disabled={requestedIds.includes(prop.id)}
+                >
+                  <Ionicons 
+                    name={requestedIds.includes(prop.id) ? "checkmark-circle" : "paper-plane"} 
+                    size={14} 
+                    color={requestedIds.includes(prop.id) ? Colors.success : Colors.white} 
+                  />
+                  <Text style={[
+                    styles.requestBtnText,
+                    requestedIds.includes(prop.id) && { color: Colors.textSecondary }
+                  ]}>
+                    {requestedIds.includes(prop.id) ? t('requested') : t('requestPayment')}
+                  </Text>
                 </TouchableOpacity>
               </View>
             )}

@@ -4,7 +4,6 @@ import React, { useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
-  SafeAreaView,
   StatusBar,
   StyleSheet,
   Text,
@@ -14,6 +13,7 @@ import {
   Alert,
   ActivityIndicator,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, {
   FadeInUp,
   Layout,
@@ -22,12 +22,14 @@ import Animated, {
   withTiming
 } from "react-native-reanimated";
 import { Colors, Radius, Spacing } from "../constants/Theme";
+import { useLanguage } from "../hooks/useLanguage";
 import { supabase } from "../lib/supabase";
 
 type LoginMode = 'password' | 'otp';
 
 export default function LoginScreen() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [mode, setMode] = useState<LoginMode>('otp'); // Default to OTP per user requirements
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -99,15 +101,12 @@ export default function LoginScreen() {
         style={styles.content}
       >
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
-          </TouchableOpacity>
         </View>
 
         <View style={styles.formArea}>
           <Animated.View entering={FadeInUp.delay(100).duration(500)}>
-            <Text style={styles.title}>Login</Text>
-            <Text style={styles.subtitle}>Choose your preferred login method.</Text>
+            <Text style={styles.title}>{t('login')}</Text>
+            <Text style={styles.subtitle}>{t('chooseLoginMethod')}</Text>
           </Animated.View>
 
           {/* Mode Toggle */}
@@ -116,7 +115,7 @@ export default function LoginScreen() {
               style={[styles.toggleBtn, mode === 'password' && styles.toggleBtnActive]}
               onPress={() => setMode('password')}
             >
-              <Text style={[styles.toggleText, mode === 'password' && styles.toggleTextActive]}>Password</Text>
+              <Text style={[styles.toggleText, mode === 'password' && styles.toggleTextActive]}>{t('password')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.toggleBtn, mode === 'otp' && styles.toggleBtnActive]}
@@ -131,7 +130,7 @@ export default function LoginScreen() {
               <>
                 {/* Email Input */}
                 <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Email Address</Text>
+                  <Text style={styles.label}>{t('email')}</Text>
                   <View style={styles.inputWrapper}>
                     <Ionicons name="mail-outline" size={20} color={Colors.textSecondary} style={styles.inputIcon} />
                     <TextInput
@@ -149,15 +148,15 @@ export default function LoginScreen() {
                 {/* Password Input */}
                 <View style={styles.inputGroup}>
                   <View style={styles.labelRow}>
-                    <Text style={styles.label}>Password</Text>
+                    <Text style={styles.label}>{t('password')}</Text>
                     <TouchableOpacity>
-                      <Text style={styles.forgotText}>Forgot?</Text>
+                      <Text style={styles.forgotText}>{t('forgotPassword')}</Text>
                     </TouchableOpacity>
                   </View>
                   <View style={styles.inputWrapper}>
                     <Ionicons name="lock-closed-outline" size={20} color={Colors.textSecondary} style={styles.inputIcon} />
                     <TextInput
-                      placeholder="Min. 8 characters"
+                      placeholder="••••••••"
                       placeholderTextColor={Colors.textSecondary}
                       secureTextEntry={!showPassword}
                       style={styles.input}
@@ -177,7 +176,7 @@ export default function LoginScreen() {
             ) : (
               /* OTP / Phone Input */
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Phone Number</Text>
+                <Text style={styles.label}>{t('mobileNumber')}</Text>
                 <View style={styles.inputWrapper}>
                   <Ionicons name="call-outline" size={20} color={Colors.textSecondary} style={styles.inputIcon} />
                   <Text style={styles.prefix}>+91</Text>
@@ -204,18 +203,14 @@ export default function LoginScreen() {
                 onPress={handleLogin}
                 disabled={isLoading}
               >
-                {isLoading ? (
-                  <ActivityIndicator color={Colors.white} />
-                ) : (
-                  <Text style={styles.buttonText}>
-                    {mode === 'password' ? 'Login' : 'Send OTP'}
-                  </Text>
-                )}
+                <Text style={styles.buttonText}>
+                  {mode === 'password' ? t('login') : t('sendOtp')}
+                </Text>
               </TouchableOpacity>
             </Animated.View>
 
             <TouchableOpacity style={styles.switchLink} onPress={() => router.push("/signup" as any)}>
-              <Text style={styles.switchText}>New to TenantBridge? <Text style={styles.switchBold}>Create Account</Text></Text>
+              <Text style={styles.switchText}>{t('newToTenantBridge')} <Text style={styles.switchBold}>{t('signup')}</Text></Text>
             </TouchableOpacity>
           </Animated.View>
         </View>

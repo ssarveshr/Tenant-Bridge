@@ -4,7 +4,6 @@ import React, { useEffect, useRef, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
-  SafeAreaView,
   StatusBar,
   StyleSheet,
   Text,
@@ -14,12 +13,15 @@ import {
   Alert,
   ActivityIndicator,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
 import { Colors, Radius, Spacing } from "../constants/Theme";
 import { supabase } from "../lib/supabase";
+import { useLanguage } from "../hooks/useLanguage";
 
 export default function VerifyOtpScreen() {
   const router = useRouter();
+  const { t } = useLanguage();
   // Using useLocalSearchParams instead of useGlobalSearchParams typically, but depends on Expo Router version
   const params = useLocalSearchParams<{
     phone?: string;
@@ -131,16 +133,13 @@ export default function VerifyOtpScreen() {
         style={styles.content}
       >
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
-          </TouchableOpacity>
         </View>
 
         <View style={styles.formArea}>
           <Animated.View entering={FadeInUp.delay(100).duration(500)}>
-            <Text style={styles.title}>Verify OTP</Text>
+            <Text style={styles.title}>{t('verifyOtp')}</Text>
             <Text style={styles.subtitle}>
-              We've sent a code to <Text style={styles.phoneHighlight}>+91 {phone || "(unknown)"}</Text>
+              {t('codeSentTo')} <Text style={styles.phoneHighlight}>+91 {phone || "9876543210"}</Text>
             </Text>
           </Animated.View>
 
@@ -169,20 +168,16 @@ export default function VerifyOtpScreen() {
               onPress={handleVerify}
               disabled={isLoading}
             >
-              {isLoading ? (
-                <ActivityIndicator color={Colors.white} />
-              ) : (
-                <Text style={styles.buttonText}>Verify & Continue</Text>
-              )}
+              <Text style={styles.buttonText}>{t('verifyContinue')}</Text>
             </TouchableOpacity>
 
             <View style={styles.resendContainer}>
-              <Text style={styles.resendText}>Didn't receive code? </Text>
+              <Text style={styles.resendText}>{t('didntReceiveCode')} </Text>
               {timer > 0 ? (
-                <Text style={styles.timerText}>Resend in {timer}s</Text>
+                <Text style={styles.timerText}>{t('resendIn')} {timer}s</Text>
               ) : (
-                <TouchableOpacity onPress={handleResend}>
-                  <Text style={styles.resendLink}>Resend Now</Text>
+                <TouchableOpacity onPress={() => setTimer(30)}>
+                  <Text style={styles.resendLink}>{t('resendNow')}</Text>
                 </TouchableOpacity>
               )}
             </View>

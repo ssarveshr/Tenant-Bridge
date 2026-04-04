@@ -24,9 +24,7 @@ export default function WorkspaceScreen() {
       
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
-        </TouchableOpacity>
+        <View style={{ width: 24 }} />
         <View style={styles.headerTitleContainer}>
           <Text style={styles.headerTitle}>Sunshine Apartments</Text>
           <Text style={styles.headerSubtitle}>Flat 402 • Workspace</Text>

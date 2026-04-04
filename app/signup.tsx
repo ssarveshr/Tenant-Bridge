@@ -4,7 +4,6 @@ import React, { useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
-  SafeAreaView,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -15,12 +14,15 @@ import {
   Alert,
   ActivityIndicator,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, { FadeInUp } from "react-native-reanimated";
 import { Colors, Radius, Spacing } from "../constants/Theme";
 import { supabase } from "../lib/supabase";
+import { useLanguage } from "../hooks/useLanguage";
 
 export default function SignupScreen() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -97,20 +99,17 @@ export default function SignupScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
         >
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
-          </TouchableOpacity>
 
           <View style={styles.formArea}>
             <Animated.View entering={FadeInUp.delay(100).duration(500)}>
-              <Text style={styles.title}>Create Account</Text>
-              <Text style={styles.subtitle}>Join TenantBridge for a seamless rental journey.</Text>
+              <Text style={styles.title}>{t('signup')}</Text>
+              <Text style={styles.subtitle}>{t('joinTenantBridge')}</Text>
             </Animated.View>
 
             <View style={styles.form}>
               {/* Full Name */}
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Full Name</Text>
+                <Text style={styles.label}>{t('fullName')}</Text>
                 <View style={styles.inputWrapper}>
                   <Ionicons name="person-outline" size={20} color={Colors.textSecondary} style={styles.inputIcon} />
                   <TextInput
@@ -125,7 +124,7 @@ export default function SignupScreen() {
 
               {/* Email Address */}
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Email Address</Text>
+                <Text style={styles.label}>{t('email')}</Text>
                 <View style={styles.inputWrapper}>
                   <Ionicons name="mail-outline" size={20} color={Colors.textSecondary} style={styles.inputIcon} />
                   <TextInput
@@ -142,7 +141,7 @@ export default function SignupScreen() {
 
               {/* Mobile Number */}
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Mobile Number</Text>
+                <Text style={styles.label}>{t('mobileNumber')}</Text>
                 <View style={styles.inputWrapper}>
                   <Ionicons name="call-outline" size={20} color={Colors.textSecondary} style={styles.inputIcon} />
                   <Text style={styles.prefix}>+91</Text>
@@ -160,11 +159,11 @@ export default function SignupScreen() {
 
               {/* Password */}
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Password</Text>
+                <Text style={styles.label}>{t('password')}</Text>
                 <View style={styles.inputWrapper}>
                   <Ionicons name="lock-closed-outline" size={20} color={Colors.textSecondary} style={styles.inputIcon} />
                   <TextInput
-                    placeholder="Min. 8 characters"
+                    placeholder="••••••••"
                     placeholderTextColor={Colors.textSecondary}
                     secureTextEntry={!showPassword}
                     style={styles.input}
@@ -187,15 +186,11 @@ export default function SignupScreen() {
                 onPress={handleSignup}
                 disabled={isLoading}
               >
-                {isLoading ? (
-                  <ActivityIndicator color={Colors.white} />
-                ) : (
-                  <Text style={styles.buttonText}>Create Account</Text>
-                )}
+                <Text style={styles.buttonText}>{t('signup')}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity style={styles.switchLink} onPress={() => router.push("/login" as any)}>
-                <Text style={styles.switchText}>Already registered? <Text style={styles.switchBold}>Login</Text></Text>
+                <Text style={styles.switchText}>{t('alreadyRegistered')} <Text style={styles.switchBold}>{t('login')}</Text></Text>
               </TouchableOpacity>
             </View>
           </View>

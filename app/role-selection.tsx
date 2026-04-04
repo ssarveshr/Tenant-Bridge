@@ -1,23 +1,23 @@
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  SafeAreaView,
   StatusBar,
-  Alert,
-  ActivityIndicator,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { useRouter } from "expo-router";
-import { Colors, Spacing, Radius } from "../constants/Theme";
-import { Ionicons } from "@expo/vector-icons";
+import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, { FadeInUp } from "react-native-reanimated";
 import { supabase } from "../lib/supabase";
+import { Colors, Radius, Spacing } from "../constants/Theme";
+import { useLanguage } from "../hooks/useLanguage";
 
 export default function RoleSelection() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const { t } = useLanguage();
 
   const handleRoleSelect = async (role: "tenant" | "owner") => {
     setIsLoading(true);
@@ -68,36 +68,29 @@ export default function RoleSelection() {
           entering={FadeInUp.delay(100).duration(500)}
           style={styles.header}
         >
-          <Text style={styles.title}>Choose your role</Text>
-          <Text style={styles.subtitle}>Our platform adapts based on who you are.</Text>
+          <Text style={styles.title}>{t('chooseRole')}</Text>
+          <Text style={styles.subtitle}>{t('platformAdapts')}</Text>
         </Animated.View>
 
-        {isLoading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={Colors.accent} />
-            <Text style={styles.loadingText}>Setting up your profile...</Text>
-          </View>
-        ) : (
-          <View style={styles.roleGrid}>
-            <RoleCard
-              icon="person-outline"
-              title="Tenant"
-              desc="Move in, pay rent, resolve disputes, and track agreements."
-              onPress={() => handleRoleSelect("tenant")}
-              delay={200}
-            />
-            <RoleCard
-              icon="home-outline"
-              title="House Owner"
-              desc="Manage properties, verify payments, and handle tenant issues."
-              onPress={() => handleRoleSelect("owner")}
-              delay={300}
-            />
-          </View>
-        )}
+        <View style={styles.roleGrid}>
+          <RoleCard
+            icon="person-outline"
+            title={t('tenant')}
+            desc={t('tenantMode')}
+            onPress={() => handleRoleSelect("tenant")}
+            delay={200}
+          />
+          <RoleCard
+            icon="home-outline"
+            title={t('houseOwner')}
+            desc={t('ownerMode')}
+            onPress={() => handleRoleSelect("owner")}
+            delay={300}
+          />
+        </View>
 
         <Text style={styles.footerNote}>
-          This setting can be changed later in your profile.
+          {t('settingChangeNote')}
         </Text>
       </View>
     </SafeAreaView>
@@ -137,6 +130,17 @@ const styles = StyleSheet.create({
   },
   header: {
     marginBottom: Spacing.xxl,
+  },
+  backBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: Colors.white,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: Colors.border,
+    marginBottom: 20,
   },
   title: {
     fontSize: 28,

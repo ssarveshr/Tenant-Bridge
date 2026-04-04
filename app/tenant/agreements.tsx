@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React from "react";
+import React, { useState } from "react";
 import {
   ScrollView,
   StatusBar,
@@ -8,13 +8,46 @@ import {
   Text,
   TouchableOpacity,
   View,
+  ActivityIndicator,
 } from "react-native";
+
+import { useLanguage } from "../../hooks/useLanguage";
+import { Colors, Spacing, Radius } from "../../constants/Theme";
+import { translateText } from "../../services/aiService";
 
 export default function AgreementsScreen() {
   const router = useRouter();
+  const { t, n, language } = useLanguage();
+  const [translatedTerms, setTranslatedTerms] = useState<string | null>(null);
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [contractAccepted, setContractAccepted] = useState(true); // default true for first mock card
 
   const navigateTo = (path: string) => {
     router.push(path as any);
+  };
+
+  const handleTranslate = async () => {
+    if (translatedTerms) {
+      setTranslatedTerms(null); // toggle off
+      return;
+    }
+    
+    setIsTranslating(true);
+    try {
+      const englishText = "1. Rent is ₹25,000 per month payable by the 5th.\n2. Security deposit is ₹75,000.\n3. Eviction requires 30 days notice.\n4. Property must be kept clean.";
+      const targetLang = language === 'hi' ? 'Hindi' : language === 'mr' ? 'Marathi' : language === 'kn' ? 'Kannada' : 'English';
+      
+      if (targetLang === 'English') {
+        setTranslatedTerms(englishText);
+      } else {
+        const result = await translateText(englishText, targetLang);
+        setTranslatedTerms(result);
+      }
+    } catch(e) {
+      setTranslatedTerms("Error translating");
+    } finally {
+      setIsTranslating(false);
+    }
   };
 
   return (
@@ -27,24 +60,28 @@ export default function AgreementsScreen() {
       >
         {/* Header Section */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Agreements</Text>
-          <Text style={styles.headerSubtitle}>Manage your rental agreements</Text>
+          <Text style={styles.headerTitle}>{t('agreements')}</Text>
+          <Text style={styles.headerSubtitle}>{t('manageRental')}</Text>
         </View>
 
         <View style={styles.contentBody}>
           {/* Upload New Agreement Card */}
-          <TouchableOpacity style={styles.uploadCard} activeOpacity={0.8}>
+          <TouchableOpacity 
+            style={styles.uploadCard} 
+            activeOpacity={0.8}
+            onPress={() => navigateTo("/owner/upload-agreement")}
+          >
             <View style={styles.uploadIconContainer}>
               <Ionicons name="cloud-upload-outline" size={28} color="#1a56f0" />
             </View>
             <View style={styles.uploadTextContainer}>
-              <Text style={styles.uploadTitle}>Upload New Agreement</Text>
-              <Text style={styles.uploadSubtitle}>Add a new rental agreement with AI parsing</Text>
+              <Text style={styles.uploadTitle}>{t('uploadNewAgreement')}</Text>
+              <Text style={styles.uploadSubtitle}>{t('addWithAi')}</Text>
             </View>
           </TouchableOpacity>
 
           {/* Current Agreement Section */}
-          <Text style={styles.sectionTitle}>Current Agreement</Text>
+          <Text style={styles.sectionTitle}>{t('currentAgreement')}</Text>
           <View style={styles.agreementCard}>
             <View style={styles.cardHeader}>
               <View style={styles.propertyIconContainer}>
@@ -52,33 +89,60 @@ export default function AgreementsScreen() {
               </View>
               <View style={styles.propertyTextContainer}>
                 <Text style={styles.propertyName}>Sunshine Apartments, Flat 402</Text>
-                <Text style={styles.propertyType}>Residential</Text>
+                <Text style={styles.propertyType}>{t('residential')}</Text>
               </View>
               <View style={styles.statusBadgeActive}>
                 <Ionicons name="checkmark-circle-outline" size={14} color="#00c853" />
-                <Text style={styles.statusTextActive}>Active</Text>
+                <Text style={styles.statusTextActive}>{t('active')}</Text>
               </View>
             </View>
 
             <View style={styles.detailsRow}>
               <View style={styles.detailItem}>
-                <Text style={styles.detailLabel}>Monthly Rent</Text>
-                <Text style={styles.detailValue}>₹25,000</Text>
+                <Text style={styles.detailLabel}>{t('monthlyRent')}</Text>
+                <Text style={styles.detailValue}>₹{n('25,000')}</Text>
               </View>
               <View style={styles.detailItem}>
-                <Text style={styles.detailLabel}>Security Deposit</Text>
-                <Text style={styles.detailValue}>₹75,000</Text>
+                <Text style={styles.detailLabel}>{t('securityDeposit')}</Text>
+                <Text style={styles.detailValue}>₹{n('75,000')}</Text>
               </View>
             </View>
 
             <View style={styles.dateRow}>
               <Ionicons name="calendar-outline" size={16} color="#666" />
-              <Text style={styles.dateText}>Jan 1, 2026 - Dec 31, 2026</Text>
+              <Text style={styles.dateText}>{n('Jan 1, 2026 - Dec 31, 2026')}</Text>
             </View>
+
+            <TouchableOpacity 
+              style={styles.translateBtn} 
+              onPress={handleTranslate}
+              disabled={isTranslating}
+            >
+              <Ionicons name="language" size={18} color="#1a56f0" />
+              <Text style={styles.translateBtnText}>
+                {isTranslating ? "Translating..." : translatedTerms ? "Hide Translation" : `Translate terms to ${language.toUpperCase()}`}
+              </Text>
+            </TouchableOpacity>
+
+            {translatedTerms && (
+              <View style={styles.translatedTermsBox}>
+                <Text style={styles.translatedTermsText}>{translatedTerms}</Text>
+              </View>
+            )}
+
+            {!contractAccepted && (
+              <TouchableOpacity 
+                style={styles.acceptBtn} 
+                onPress={() => setContractAccepted(true)}
+              >
+                <Ionicons name="shield-checkmark" size={18} color="#fff" />
+                <Text style={styles.acceptBtnText}>Accept Smart Contract</Text>
+              </TouchableOpacity>
+            )}
           </View>
 
           {/* Past Agreements Section */}
-          <Text style={styles.sectionTitle}>Past Agreements</Text>
+          <Text style={styles.sectionTitle}>{t('pastAgreements')}</Text>
           <View style={styles.agreementCard}>
             <View style={styles.cardHeader}>
               <View style={styles.propertyIconContainer}>
@@ -86,16 +150,16 @@ export default function AgreementsScreen() {
               </View>
               <View style={styles.propertyTextContainer}>
                 <Text style={styles.propertyName}>Green Valley Flats</Text>
-                <Text style={styles.propertyType}>Residential</Text>
+                <Text style={styles.propertyType}>{t('residential')}</Text>
               </View>
               <View style={styles.statusBadgeCompleted}>
-                <Text style={styles.statusTextCompleted}>Completed</Text>
+                <Text style={styles.statusTextCompleted}>{t('completed')}</Text>
               </View>
             </View>
 
             <View style={styles.dateRow}>
               <Ionicons name="calendar-outline" size={16} color="#666" />
-              <Text style={styles.dateText}>Jan 1, 2025 - Dec 31, 2025</Text>
+              <Text style={styles.dateText}>{n('Jan 1, 2025 - Dec 31, 2025')}</Text>
             </View>
           </View>
 
@@ -106,11 +170,11 @@ export default function AgreementsScreen() {
 
       {/* Bottom Tab Bar */}
       <View style={styles.tabBar}>
-        <TabItem icon="home-outline" label="Dashboard" onPress={() => navigateTo("/tenant/dashboard")} />
-        <TabItem icon="document-text" label="Agreements" active onPress={() => { }} />
-        <TabItem icon="wallet-outline" label="Payments" onPress={() => navigateTo("/tenant/payments")} />
-        <TabItem icon="alert-circle-outline" label="Disputes" onPress={() => navigateTo("/tenant/disputes")} />
-        <TabItem icon="person-outline" label="Profile" />
+        <TabItem icon="home-outline" label={t('dashboard')} onPress={() => navigateTo("/tenant/dashboard")} />
+        <TabItem icon="document-text" label={t('agreements')} active onPress={() => { }} />
+        <TabItem icon="wallet-outline" label={t('payments')} onPress={() => navigateTo("/tenant/payments")} />
+        <TabItem icon="alert-circle-outline" label={t('disputes')} onPress={() => navigateTo("/tenant/disputes")} />
+        <TabItem icon="person-outline" label={t('profile')} onPress={() => navigateTo("/tenant/profile")} />
       </View>
     </View>
   );
@@ -295,6 +359,49 @@ const styles = StyleSheet.create({
     color: "#444",
     marginLeft: 8,
     fontWeight: "500",
+  },
+  translateBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#eef4ff",
+    paddingVertical: 12,
+    borderRadius: 12,
+    marginTop: 16,
+    gap: 8,
+  },
+  translateBtnText: {
+    color: "#1a56f0",
+    fontWeight: "700",
+    fontSize: 14,
+  },
+  translatedTermsBox: {
+    backgroundColor: "#f8f9fc",
+    padding: 16,
+    borderRadius: 12,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: "#e1e4e8",
+  },
+  translatedTermsText: {
+    color: "#333",
+    fontSize: 14,
+    lineHeight: 22,
+  },
+  acceptBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#00c853",
+    paddingVertical: 14,
+    borderRadius: 12,
+    marginTop: 16,
+    gap: 8,
+  },
+  acceptBtnText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 15,
   },
   tabBar: {
     position: "absolute",

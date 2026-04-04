@@ -4,12 +4,13 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
   StatusBar,
   Image,
   Dimensions,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import { useLanguage } from "../hooks/useLanguage";
 import { Colors, Spacing, Radius } from "../constants/Theme";
 import Animated, { 
   FadeInUp, 
@@ -25,6 +26,7 @@ const { width } = Dimensions.get("window");
 
 export default function WelcomeScreen() {
   const router = useRouter();
+  const { t } = useLanguage();
   const logoScale = useSharedValue(1);
 
   React.useEffect(() => {
@@ -72,7 +74,7 @@ export default function WelcomeScreen() {
               style={styles.primaryBtn}
               onPress={() => router.push("/login" as any)}
             >
-              <Text style={styles.primaryBtnText}>Get Started</Text>
+              <Text style={styles.primaryBtnText}>{t('getStarted')}</Text>
             </TouchableOpacity>
           </Animated.View>
           
@@ -81,7 +83,7 @@ export default function WelcomeScreen() {
               style={styles.secondaryBtn}
               onPress={() => router.push("/signup" as any)}
             >
-              <Text style={styles.secondaryBtnText}>Create regular account</Text>
+              <Text style={styles.secondaryBtnText}>{t('signup')}</Text>
             </TouchableOpacity>
           </Animated.View>
         </View>
