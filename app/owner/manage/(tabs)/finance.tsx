@@ -12,9 +12,18 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { Colors, Spacing, Radius } from "../../../../constants/Theme";
 import Animated, { FadeInDown } from "react-native-reanimated";
+import { useLocalSearchParams } from "expo-router";
+import { usePropertyStore } from "../../../../store/propertyStore";
 
 export default function OwnerManageFinanceScreen() {
   const router = useRouter();
+  const { id } = useLocalSearchParams();
+  const property = usePropertyStore((state) => 
+    state.properties.find(p => p.id === id) || state.properties[0]
+  );
+
+  const rentAmount = parseInt(property.rent).toLocaleString();
+  const depositAmount = parseInt(property.deposit).toLocaleString();
 
   return (
     <SafeAreaView style={styles.container}>
@@ -35,7 +44,7 @@ export default function OwnerManageFinanceScreen() {
           <HistoryCard 
             title="House Rent - February 2026"
             date="Feb 5, 2026"
-            amount="₹25,000"
+            amount={`₹${rentAmount}`}
             method="Razorpay (Online)"
             status="Success"
             index={0}
@@ -43,7 +52,7 @@ export default function OwnerManageFinanceScreen() {
           <HistoryCard 
             title="Security Deposit"
             date="Jan 1, 2026"
-            amount="₹75,000"
+            amount={`₹${depositAmount}`}
             method="Cash (Verified)"
             status="Success"
             index={1}

@@ -7,16 +7,51 @@ import {
   TouchableOpacity,
   SafeAreaView,
   StatusBar,
+  Linking,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { Colors, Spacing, Radius } from "../constants/Theme";
 import Animated, { FadeInUp } from "react-native-reanimated";
 import { useLanguage } from "../hooks/useLanguage";
+import { getGlobalVerdict } from "../services/aiService";
+import { getActiveProcessingId, updateDisputeStatus } from "../store/disputeStore";
 
 export default function DisputeVerdictScreen() {
   const router = useRouter();
+  const rawVerdict = getGlobalVerdict();
+  const activeId = getActiveProcessingId();
   const { t } = useLanguage();
+
+  const handleAcknowledge = () => {
+    if (activeId) {
+      updateDisputeStatus(activeId, 'Resolved', rawVerdict || undefined);
+    }
+    router.push("/(tabs)/disputes" as any);
+  };
+
+  const handleEscalate = () => {
+    if (activeId) {
+      updateDisputeStatus(activeId, 'Escalated', rawVerdict || undefined);
+    }
+    Linking.openURL('mailto:legal@tenantbridge.com?subject=Need Legal Assistance with Dispute');
+    router.push("/(tabs)/disputes" as any);
+  };
+
+  let parsedVerdict = null;
+  let isError = false;
+
+  if (rawVerdict) {
+    if (rawVerdict.startsWith("Analysis failed:")) {
+      isError = true;
+    } else {
+      try {
+        parsedVerdict = JSON.parse(rawVerdict);
+      } catch (e) {
+        console.warn("Failed to parse verdict JSON:", e);
+      }
+    }
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -36,37 +71,71 @@ export default function DisputeVerdictScreen() {
       >
         <ChatBubble 
           role="ai" 
-          message="Based on the uploaded evidence and the digital agreement for Sunshine Apartments, here is my final verdict." 
+          message="Based on the uploaded evidence and the details provided, here is my resolution." 
           delay={100}
         />
-        
-        <Animated.View entering={FadeInUp.delay(300).duration(500)} style={styles.clauseCard}>
-          <View style={styles.clauseHeader}>
-            <Ionicons name="document-text" size={20} color={Colors.accent} />
-            <Text style={styles.clauseTitle}>{t('referenceClause')}</Text>
-          </View>
-          <Text style={styles.clauseContent}>
-            'Minor maintenance issues under ₹1,000 shall be the responsibility of the Tenant. Issues exceeding this amount, or structural leaks, shall be repaired by the Owner.'
-          </Text>
-        </Animated.View>
 
-        <ChatBubble 
-          role="ai" 
-          message="The estimated repair cost is ₹8,500. This exceeds the ₹1,000 threshold and is classified as a structural leak." 
-          delay={500}
-        />
-
-        <View style={styles.verdictContainer}>
-          <View style={styles.verdictBadge}>
-            <Ionicons name="checkmark-circle" size={24} color={Colors.success} />
-            <Text style={styles.verdictTitle}>{t('finalVerdict')}</Text>
+        {isError && rawVerdict ? (
+          <View style={[styles.verdictContainer, { borderColor: "#DC2626" }]}>
+            <View style={styles.verdictBadge}>
+              <Ionicons name="close-circle" size={24} color="#DC2626" />
+              <Text style={[styles.verdictTitle, { color: "#DC2626" }]}>Analysis Error</Text>
+            </View>
+            <Text style={styles.verdictText}>{rawVerdict}</Text>
           </View>
-          <Text style={styles.verdictText}>The Owner is responsible for the full repair cost and must initiate repairs within 48 hours.</Text>
+        ) : parsedVerdict ? (
+          <>
+            <Animated.View entering={FadeInUp.delay(300).duration(500)} style={styles.clauseCard}>
+              <View style={styles.clauseHeader}>
+                <Ionicons name="document-text" size={20} color={Colors.accent} />
+                <Text style={styles.clauseTitle}>{t('referenceClause')}</Text>
+              </View>
+              <Text style={styles.clauseContent}>
+                '{parsedVerdict.clauseReference}'
+              </Text>
+            </Animated.View>
+
+            <ChatBubble 
+              role="ai" 
+              message={parsedVerdict.reasoning} 
+              delay={500}
+            />
+
+            <View style={styles.verdictContainer}>
+              <View style={styles.verdictBadge}>
+                <Ionicons name="checkmark-circle" size={24} color={Colors.success} />
+                <Text style={styles.verdictTitle}>{t('finalVerdict')}</Text>
+              </View>
+              <Text style={styles.verdictText}>{parsedVerdict.finalVerdict}</Text>
+            </View>
+          </>
+        ) : rawVerdict ? (
+          <View style={styles.verdictContainer}>
+            <View style={styles.verdictBadge}>
+              <Ionicons name="checkmark-circle" size={24} color={Colors.success} />
+              <Text style={styles.verdictTitle}>{t('finalVerdict')}</Text>
+            </View>
+            <Text style={styles.verdictText}>{rawVerdict as string}</Text>
+          </View>
+        ) : (
+          <View style={styles.verdictContainer}>
+            <Text style={styles.verdictText}>No response captured. Please try scanning again.</Text>
+          </View>
+        )}
+
+        <View style={styles.actionRow}>
+          <TouchableOpacity style={[styles.acceptBtn, { flex: 1 }]} onPress={handleAcknowledge}>
+            <Text style={styles.acceptBtnText}>{t('acknowledgeVerdict')}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.escalateBtn} 
+            onPress={handleEscalate}
+          >
+            <Ionicons name="warning" size={24} color={Colors.white} />
+            <Text style={styles.escalateBtnText}>Contact Legal{"\n"}Consultant</Text>
+          </TouchableOpacity>
         </View>
-
-        <TouchableOpacity style={styles.acceptBtn} onPress={() => router.replace('/tenant/dashboard')}>
-          <Text style={styles.acceptBtnText}>{t('acknowledgeVerdict')}</Text>
-        </TouchableOpacity>
 
         <View style={{ height: 100 }} />
       </ScrollView>
@@ -205,5 +274,25 @@ const styles = StyleSheet.create({
     color: Colors.white,
     fontSize: 16,
     fontWeight: "bold",
+  },
+  actionRow: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  escalateBtn: {
+    backgroundColor: "#DC2626",
+    height: 60,
+    paddingHorizontal: 16,
+    borderRadius: Radius.m,
+    justifyContent: "center",
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 8,
+  },
+  escalateBtnText: {
+    color: Colors.white,
+    fontSize: 13,
+    fontWeight: "700",
+    textAlign: "center",
   },
 });

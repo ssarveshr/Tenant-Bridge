@@ -11,6 +11,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Linking,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -161,8 +162,6 @@ export default function ChatScreen() {
     </SafeAreaView>
   );
 }
-
-import { Linking } from "react-native";
 
 function MessageBubble({ msg, index }: any) {
   const isSelf = msg.sender === "user";

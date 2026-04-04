@@ -12,7 +12,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { Colors, Spacing, Radius } from "../constants/Theme";
-import Animated, { FadeInUp } from "react-native-reanimated";
+import { usePropertyStore } from "../store/propertyStore";
 import RazorpayCheckout from "react-native-razorpay";
 import axios from "axios";
 import { supabase } from "../lib/supabase";
@@ -25,8 +25,13 @@ const RAZORPAY_KEY_ID = process.env.EXPO_PUBLIC_RAZORPAY_KEY_ID || "YOUR_TEST_KE
 
 export default function PayRentScreen() {
   const router = useRouter();
+  const myLease = usePropertyStore((state) => state.getMyLease());
+
+  if (!myLease) return null;
+  const amount = parseInt(myLease.rent);
+  const paymentAmount = amount + 20;
   const [isLoading, setIsLoading] = useState(false);
-  const paymentAmount = 5000; // Example dynamic rent outstanding amount
+  // const paymentAmount = 5000; // Example dynamic rent outstanding amount
 
   const handleOnlinePayment = async () => {
     setIsLoading(true);
@@ -118,8 +123,8 @@ export default function PayRentScreen() {
       <View style={styles.content}>
         <View style={styles.amountContainer}>
           <Text style={styles.amountLabel}>Rent Outstanding</Text>
-          <Text style={styles.amountValue}>₹5,000</Text>
-          <Text style={styles.feeBreakdown}>₹4,950 Rent + ₹50 Platform Fee</Text>
+          <Text style={styles.amountValue}>₹{total.toLocaleString()}</Text>
+          <Text style={styles.feeBreakdown}>₹{amount.toLocaleString()} Rent + ₹20 Platform Fee</Text>
         </View>
 
         <Text style={styles.sectionTitle}>Select Payment Method</Text>

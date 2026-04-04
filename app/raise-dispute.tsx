@@ -10,15 +10,19 @@ import {
   StatusBar,
   KeyboardAvoidingView,
   Platform,
+  Image,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from "expo-router";
 import { Colors, Spacing, Radius } from "../constants/Theme";
 import Animated, { FadeInUp, FadeIn, Layout } from "react-native-reanimated";
 import { useLanguage } from "../hooks/useLanguage";
+import { addDispute, setActiveProcessingId } from "../store/disputeStore";
 import { getDocumentAsync } from "expo-document-picker";
 import { supabase } from "../lib/supabase";
-import { ActivityIndicator, Alert } from "react-native";
 import * as FileSystem from 'expo-file-system/legacy';
 import { decode } from 'base64-arraybuffer';
 
@@ -30,6 +34,30 @@ export default function RaiseDisputeScreen() {
   const [description, setDescription] = useState("");
   const [evidence, setEvidence] = useState<any[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async () => {
+    if (!title || !description) {
+      Alert.alert("Error", "Please provide a title and description");
+      return;
+    }
+
+    setIsSubmitting(true);
+    
+    // Simulate API call
+    setTimeout(() => {
+      addDispute({
+        title,
+        category,
+        description,
+      });
+      
+      setIsSubmitting(false);
+      Alert.alert("Success", "Dispute submitted for AI Review", [
+        { text: "OK", onPress: () => router.back() }
+      ]);
+    }, 2000);
+  };
 
   const uploadFileToSupabase = async (uri: string, name: string) => {
     try {
@@ -216,10 +244,15 @@ export default function RaiseDisputeScreen() {
             </View>
 
             <TouchableOpacity 
-              style={styles.primaryBtn}
-              onPress={() => router.push("/dispute-verdict" as any)}
+              style={[styles.primaryBtn, isSubmitting && styles.primaryBtnDisabled]}
+              onPress={handleSubmit}
+              disabled={isSubmitting}
             >
-              <Text style={styles.primaryBtnText}>Submit for AI Review</Text>
+              {isSubmitting ? (
+                <ActivityIndicator color={Colors.white} />
+              ) : (
+                <Text style={styles.primaryBtnText}>Submit for AI Review</Text>
+              )}
             </TouchableOpacity>
           </Animated.View>
 
@@ -332,6 +365,24 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: Colors.accent,
     marginTop: 8,
+  },
+  imagePreviewContainer: {
+    marginTop: 24,
+    position: "relative",
+    borderRadius: Radius.m,
+    overflow: "hidden",
+  },
+  imagePreview: {
+    width: "100%",
+    height: 150,
+    borderRadius: Radius.m,
+  },
+  removeImageBtn: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    backgroundColor: "rgba(255,255,255,0.8)",
+    borderRadius: 12,
   },
   aiNotice: {
     flexDirection: "row",

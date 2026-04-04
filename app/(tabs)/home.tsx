@@ -8,16 +8,57 @@ import {
   SafeAreaView,
   StatusBar,
   Image,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons, Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { Colors, Spacing, Radius } from "../../constants/Theme";
 import Animated, { FadeInUp, FadeInRight } from "react-native-reanimated";
 import { useLanguage } from "../../hooks/useLanguage";
+import { getDisputes } from "../../store/disputeStore";
+import { usePropertyStore } from "../../store/propertyStore";
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { t } = useLanguage();
+  const { t, n } = useLanguage();
+  const { fetchProperties, getMyLease, isLoading } = usePropertyStore();
+  const myLease = getMyLease();
+
+  React.useEffect(() => {
+    fetchProperties('tenant');
+  }, []);
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.emptyState}>
+          <ActivityIndicator color={Colors.accent} size="large" />
+          <Text style={[styles.emptyText, { marginTop: 20 }]}>Searching for your lease...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!myLease) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="dark-content" />
+        <View style={styles.emptyState}>
+          <View style={styles.iconCircleLarge}>
+            <Ionicons name="home-outline" size={64} color={Colors.border} />
+          </View>
+          <Text style={styles.emptyText}>No Active Rental Agreement</Text>
+          <Text style={styles.emptySubtitle}>We couldn't find a lease linked to your phone number.</Text>
+          <TouchableOpacity 
+            style={styles.switchBtn}
+            onPress={() => router.replace("/role-selection" as any)}
+          >
+            <Text style={styles.switchText}>Switch to Owner Mode</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -28,7 +69,7 @@ export default function HomeScreen() {
         <View>
           <Text style={styles.propertyLabel}>{t('propertyWorkspace')}</Text>
           <View style={styles.propertySelector}>
-            <Text style={styles.propertyName}>Sunshine Apartments</Text>
+            <Text style={styles.propertyName}>{myLease.name}</Text>
             <Ionicons name="chevron-down" size={16} color={Colors.textPrimary} style={{ marginLeft: 6 }} />
           </View>
         </View>
@@ -46,11 +87,11 @@ export default function HomeScreen() {
           <View style={styles.statusRow}>
             <View>
               <Text style={styles.rentLabel}>{t('monthlyRent')}</Text>
-              <Text style={styles.rentValue}>₹25,000</Text>
+              <Text style={styles.rentValue}>₹{n(parseInt(myLease.rent).toLocaleString())}</Text>
             </View>
             <View style={styles.dueBadge}>
               <Text style={styles.dueLabel}>{t('nextDue')}</Text>
-              <Text style={styles.dueDate}>April 5, 2026</Text>
+              <Text style={styles.dueDate}>{myLease.dueDate}</Text>
             </View>
           </View>
         </Animated.View>
@@ -67,9 +108,12 @@ export default function HomeScreen() {
           <DashboardCard 
             icon="alert-circle-outline" 
             label={t('disputes')} 
-            value="None Active" 
+            value={getDisputes().filter(d => d.status !== 'Resolved').length > 0 
+              ? `${getDisputes().filter(d => d.status !== 'Resolved').length} Active` 
+              : t('noActiveDisputes')} 
             delay={300}
             color="#EF4444"
+            onPress={() => router.push("/(tabs)/disputes" as any)}
           />
           <DashboardCard 
             icon="document-text-outline" 
@@ -99,9 +143,9 @@ export default function HomeScreen() {
 
         <View style={styles.activityList}>
           <ActivityItem 
-            title="Rent Paid - March" 
+            title={`Rent Paid - ${new Date().toLocaleString('default', { month: 'long' })}`} 
             date="Mar 5, 2026" 
-            amount="₹25,000"
+            amount={`₹${parseInt(myLease.rent).toLocaleString()}`}
             status="success"
             delay={600}
           />
@@ -120,7 +164,13 @@ export default function HomeScreen() {
         <TouchableOpacity 
           style={styles.payBtn} 
           activeOpacity={0.9}
-          onPress={() => router.push("/pay-rent" as any)}
+          onPress={() => router.push({
+            pathname: "/online-payment",
+            params: { 
+              amount: myLease.rent,
+              propertyName: myLease.name
+            }
+          } as any)}
         >
           <Ionicons name="wallet-outline" size={24} color={Colors.white} />
           <Text style={styles.payBtnText}>{t('payRent')}</Text>
@@ -377,5 +427,49 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
     marginLeft: 12,
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 40,
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: Colors.textPrimary,
+    marginTop: 16,
+    textAlign: "center",
+  },
+  switchText: {
+    fontSize: 14,
+    color: Colors.accent,
+    fontWeight: "700",
+  },
+  iconCircleLarge: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: '#F1F5F9',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    marginTop: 8,
+    lineHeight: 20,
+    paddingHorizontal: 20,
+  },
+  switchBtn: {
+    marginTop: 30,
+    backgroundColor: Colors.white,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: Radius.m,
+    borderWidth: 1,
+    borderColor: Colors.accent,
   },
 });

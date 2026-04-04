@@ -1,82 +1,138 @@
-import { Ionicons } from "@expo/vector-icons";
-import { getDocumentAsync } from "expo-document-picker";
-import { readAsStringAsync } from "expo-file-system";
-import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-  Alert,
-  BackHandler,
-  KeyboardAvoidingView,
-  Platform,
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
+  View,
   Text,
+  StyleSheet,
   TextInput,
   TouchableOpacity,
-  View,
+  ScrollView,
+  StatusBar,
+  KeyboardAvoidingView,
+  Platform,
+  BackHandler,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { Colors, Spacing, Radius } from "../../constants/Theme";
 import Animated, { FadeInUp } from "react-native-reanimated";
-import { Colors, Radius, Spacing } from "../../constants/Theme";
-import { useLanguage } from "../../hooks/useLanguage";
+import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
+import { readAsStringAsync } from "expo-file-system/legacy";
 import { analyzeLeaseAgreement } from "../../services/aiService";
+import { useLanguage } from "../../hooks/useLanguage";
 
 export default function AddPropertyScreen() {
   const router = useRouter();
   const { t } = useLanguage();
   const [step, setStep] = useState(1);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [analysisSummary, setAnalysisSummary] = useState("");
-  const [isCreated, setIsCreated] = useState(false);
-  const [pickedFile, setPickedFile] = useState<any>(null);
-
+  
   const [form, setForm] = useState({
     name: "",
     unit: "",
     location: "",
-    type: "Residential",
+    type: "Residential" as "Residential" | "Commercial",
     rent: "",
     deposit: "",
     dueDate: "",
+    leaseImage: null as string | null,
+    leaseDocumentName: null as string | null,
+    tenantPhone: "", // New field to link tenant
   });
 
-  const handlePickDocument = async () => {
+  const pickImage = async () => {
     try {
-      const result = await getDocumentAsync({
-        type: "*/*", // Broaden type for diagnostics
+      let result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: 'images',
+        allowsEditing: true,
+        quality: 0.5,
+        base64: true,
+      });
+
+      if (!result.canceled) {
+        setForm({ 
+          ...form, 
+          leaseImage: result.assets[0].uri, 
+          leaseDocumentName: result.assets[0].fileName || "Agreement_Image.jpg" 
+        });
+      }
+    } catch (err: any) {
+      console.error("Pick image error:", err);
+      Alert.alert("Error", "Failed to pick image");
+    }
+  };
+
+  const pickDocument = async () => {
+    try {
+      let result = await DocumentPicker.getDocumentAsync({
+        type: 'application/pdf',
         copyToCacheDirectory: true,
       });
 
       if (!result.canceled) {
         setIsAnalyzing(true);
-        setPickedFile(result.assets[0]);
+        const file = result.assets[0];
+        
+        console.log("Picking document:", file.name, file.uri);
 
-        // Convert file to base64 for Gemini multimodal input
-        const base64 = await readAsStringAsync(result.assets[0].uri, {
-          encoding: "base64",
-        });
+        // Convert file to base64 for Gemini AI extraction
+        // Using legacy import to satisfy SDK deprecations
+        let base64;
+        try {
+          base64 = await readAsStringAsync(file.uri, { encoding: "base64" });
+        } catch (readErr: any) {
+          console.error("FileSystem.readAsStringAsync error:", readErr);
+          throw new Error(`Failed to read file: ${readErr.message}`);
+        }
 
         const data = await analyzeLeaseAgreement(base64);
+        
         if (data) {
           setForm({
-            name: data.name || "",
-            unit: data.unit || "",
-            location: data.location || "",
-            type: data.type || "Residential",
-            rent: data.rent || "",
-            deposit: data.deposit || "",
-            dueDate: data.dueDate || "",
+            ...form,
+            name: data.name || form.name,
+            unit: data.unit || form.unit,
+            location: data.location || form.location,
+            type: data.type || form.type,
+            rent: data.rent || form.rent,
+            deposit: data.deposit || form.deposit,
+            dueDate: data.dueDate || form.dueDate,
+            leaseImage: file.uri,
+            leaseDocumentName: file.name
           });
-          setAnalysisSummary(data.summary || "");
+          Alert.alert("AI Extraction", "We've automatically filled the details from your document!");
+        } else {
+          console.warn("AI extraction returned no data (likely Gemini error).");
+          // Just let the user fill manually
         }
         setIsAnalyzing(false);
       }
     } catch (err: any) {
-      console.error("Document pick error:", err);
-      Alert.alert("Upload Error", `Detail: ${err.message || 'Unknown error'}`);
+      console.error("Document processing error detail:", err);
       setIsAnalyzing(false);
+      Alert.alert("Error", `Failed to process document: ${err.message || 'Unknown error'}`);
     }
+  };
+
+  const handleSubmit = () => {
+    if (!form.name || !form.rent) {
+      Alert.alert("Missing Info", "Please provide at least a property name and rent.");
+      return;
+    }
+    
+    // Navigate to customization as per the updated flow
+    router.push({
+      pathname: "/owner/agreement-customization",
+      params: { 
+        ...form,
+        leaseImage: form.leaseImage || "",
+        leaseDocumentName: form.leaseDocumentName || "",
+        tenantPhone: form.tenantPhone
+      }
+    } as any);
   };
 
   React.useEffect(() => {
@@ -99,166 +155,146 @@ export default function AddPropertyScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
-
+      
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={24} color={Colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t('addProperty')}</Text>
+        <Text style={styles.headerTitle}>{t('addProperty') || "Add Property"}</Text>
         <View style={{ width: 24 }} />
       </View>
 
-      <KeyboardAvoidingView
+      <KeyboardAvoidingView 
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.flex}
       >
-        <ScrollView
+        <ScrollView 
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
         >
-          {isCreated ? (
-            <Animated.View entering={FadeInUp} style={styles.successContainer}>
-              <View style={styles.successIconCircle}>
-                <Ionicons name="checkmark-circle" size={80} color={Colors.success} />
+          {/* Progress Bar */}
+          <View style={styles.progressArea}>
+            <View style={styles.progressHeader}>
+              <Text style={styles.stepText}>Step {step} of 2</Text>
+              <Text style={styles.stepLabel}>{step === 1 ? t('propertyDetails') || "Property Details" : t('rentalTerms') || "Rental Terms"}</Text>
+            </View>
+            <View style={styles.progressTrack}>
+              <View style={[styles.progressFill, { width: step === 1 ? "50%" : "100%" }]} />
+            </View>
+          </View>
+
+          {isAnalyzing && (
+            <View style={styles.analyzingBox}>
+              <ActivityIndicator color={Colors.accent} size="small" />
+              <Text style={styles.analyzingText}>AI is reading your agreement...</Text>
+            </View>
+          )}
+
+          {step === 1 ? (
+            <Animated.View entering={FadeInUp.duration(500)} style={styles.form}>
+              <InputGroup 
+                label={t('propertyName') || "Property Name"} 
+                placeholder="e.g. Sunshine Apartments" 
+                value={form.name}
+                onChangeText={(val: string) => setForm({ ...form, name: val })}
+              />
+              <InputGroup 
+                label={t('unitNumber') || "Unit Number"} 
+                placeholder="e.g. Flat 402" 
+                value={form.unit}
+                onChangeText={(val: string) => setForm({ ...form, unit: val })}
+              />
+              <InputGroup 
+                label={t('location') || "Location"} 
+                placeholder="Enter locality" 
+                value={form.location}
+                onChangeText={(val: string) => setForm({ ...form, location: val })}
+              />
+              <InputGroup 
+                label={t('tenantPhone') || "Tenant Phone Number"} 
+                placeholder="10-digit number" 
+                keyboardType="phone-pad"
+                value={form.tenantPhone}
+                onChangeText={(val: string) => setForm({ ...form, tenantPhone: val })}
+              />
+              
+              <Text style={styles.label}>{t('propertyType') || "Property Type"}</Text>
+              <View style={styles.typeRow}>
+                <TypeOption 
+                  label={t('residential') || "Residential"} 
+                  icon="home" 
+                  selected={form.type === "Residential"} 
+                  onPress={() => setForm({ ...form, type: "Residential" })}
+                />
+                <TypeOption 
+                  label={t('commercial') || "Commercial"} 
+                  icon="business" 
+                  selected={form.type === "Commercial"} 
+                  onPress={() => setForm({ ...form, type: "Commercial" })}
+                />
               </View>
-              <Text style={styles.successTitle}>Property Listed!</Text>
-              <Text style={styles.successDesc}>
-                Your property "{form.name}" has been successfully listed. AI has summarized your contract terms for easy access.
-              </Text>
-
-              {analysisSummary ? (
-                <View style={styles.summaryResultCard}>
-                  <Text style={styles.summaryResultTitle}>Agreement Extraction</Text>
-                  <Text style={styles.summaryResultText}>{analysisSummary}</Text>
-                </View>
-              ) : null}
-
-              <TouchableOpacity
-                style={styles.primaryBtn}
-                onPress={() => router.replace("/owner/home" as any)}
-              >
-                <Text style={styles.primaryBtnText}>Back to Home</Text>
-              </TouchableOpacity>
             </Animated.View>
           ) : (
-            <>
-              {/* Progress Bar */}
-              <View style={styles.progressArea}>
-                <View style={styles.progressHeader}>
-                  <Text style={styles.stepText}>Step {step} of 2</Text>
-                  <Text style={styles.stepLabel}>{step === 1 ? t('propertyDetails') : t('rentalTerms')}</Text>
-                </View>
-                <View style={styles.progressTrack}>
-                  <View style={[styles.progressFill, { width: step === 1 ? "50%" : "100%" }]} />
-                </View>
-              </View>
-
-              {step === 1 ? (
-                <View style={styles.form}>
-                  <InputGroup
-                    label={t('propertyName')}
-                    placeholder="e.g. Sunshine Apartments"
-                    value={form.name}
-                    onChangeText={(val: string) => setForm({ ...form, name: val })}
-                  />
-                  <InputGroup
-                    label={t('unitNumber')}
-                    placeholder="e.g. Flat 402"
-                    value={form.unit}
-                    onChangeText={(val: string) => setForm({ ...form, unit: val })}
-                  />
-                  <InputGroup
-                    label={t('location')}
-                    placeholder="Enter locality"
-                    value={form.location}
-                    onChangeText={(val: string) => setForm({ ...form, location: val })}
-                  />
-
-                  <Text style={styles.label}>{t('propertyType')}</Text>
-                  <View style={styles.typeRow}>
-                    <TypeOption
-                      label={t('residential')}
-                      icon="home"
-                      selected={form.type === "Residential"}
-                      onPress={() => setForm({ ...form, type: "Residential" })}
-                    />
-                    <TypeOption
-                      label={t('commercial')}
-                      icon="business"
-                      selected={form.type === "Commercial"}
-                      onPress={() => setForm({ ...form, type: "Commercial" })}
-                    />
-                  </View>
-                </View>
-              ) : (
-                <View style={styles.form}>
-                  <InputGroup
-                    label={t('monthlyRentWithSymbol')}
-                    placeholder="25000"
-                    keyboardType="numeric"
-                    value={form.rent}
-                    onChangeText={(val: string) => setForm({ ...form, rent: val })}
-                  />
-                  <InputGroup
-                    label={t('securityDepositWithSymbol')}
-                    placeholder="75000"
-                    keyboardType="numeric"
-                    value={form.deposit}
-                    onChangeText={(val: string) => setForm({ ...form, deposit: val })}
-                  />
-                  <InputGroup
-                    label={t('paymentDueDate')}
-                    placeholder="Every 5th"
-                    value={form.dueDate}
-                    onChangeText={(val: string) => setForm({ ...form, dueDate: val })}
-                  />
-
-                  <TouchableOpacity
-                    style={[styles.uploadBtn, isAnalyzing && styles.uploadBtnDisabled]}
-                    onPress={handlePickDocument}
-                    disabled={isAnalyzing}
-                  >
-                    {isAnalyzing ? (
-                      <View style={{ alignItems: 'center' }}>
-                        <Ionicons name="sync" size={32} color={Colors.accent} />
-                        <Text style={styles.uploadBtnText}>AI Parsing Agreement...</Text>
-                      </View>
-                    ) : (
-                      <>
-                        <Ionicons name="document-attach" size={32} color={Colors.accent} />
-                        <Text style={styles.uploadBtnText}>
-                          {pickedFile ? pickedFile.name : t('uploadLease')}
-                        </Text>
-                        <Text style={styles.uploadSubtext}>AI will read the PDF to fill form automatically</Text>
-                      </>
-                    )}
-                  </TouchableOpacity>
-
-                  {analysisSummary ? (
-                    <Animated.View entering={FadeInUp} style={styles.summaryBox}>
-                      <View style={styles.summaryHeader}>
-                        <Ionicons name="sparkles" size={16} color={Colors.accent} />
-                        <Text style={styles.summaryTitle}>AI Extraction Preview</Text>
-                      </View>
-                      <Text style={styles.summaryText}>{analysisSummary}</Text>
-                    </Animated.View>
-                  ) : null}
-                </View>
-              )}
-
-              <TouchableOpacity
-                style={styles.primaryBtn}
-                onPress={() => {
-                  if (step === 1) setStep(2);
-                  else setIsCreated(true);
-                }}
+            <Animated.View entering={FadeInUp.duration(500)} style={styles.form}>
+              <InputGroup 
+                label={t('monthlyRentWithSymbol') || "Monthly Rent"} 
+                placeholder="25000" 
+                keyboardType="numeric" 
+                value={form.rent}
+                onChangeText={(val: string) => setForm({ ...form, rent: val })}
+              />
+              <InputGroup 
+                label={t('securityDepositWithSymbol') || "Security Deposit"} 
+                placeholder="75000" 
+                keyboardType="numeric" 
+                value={form.deposit}
+                onChangeText={(val: string) => setForm({ ...form, deposit: val })}
+              />
+              <InputGroup 
+                label={t('paymentDueDate') || "Payment Due Date"} 
+                placeholder="Every 5th" 
+                value={form.dueDate}
+                onChangeText={(val: string) => setForm({ ...form, dueDate: val })}
+              />
+              
+              <TouchableOpacity 
+                style={[styles.uploadBtn, form.leaseImage && !form.leaseDocumentName?.endsWith('.pdf') ? { borderColor: Colors.success } : null, { marginBottom: 12 }]} 
+                onPress={pickImage}
               >
-                <Text style={styles.primaryBtnText}>{step === 1 ? t('nextStep') : t('listProperty')}</Text>
+                <Ionicons 
+                  name={form.leaseImage && !form.leaseDocumentName?.endsWith('.pdf') ? "checkmark-circle" : "camera-outline"} 
+                  size={24} 
+                  color={form.leaseImage && !form.leaseDocumentName?.endsWith('.pdf') ? Colors.success : Colors.accent} 
+                />
+                <Text style={[styles.uploadBtnText, form.leaseImage && !form.leaseDocumentName?.endsWith('.pdf') ? { color: Colors.success } : null]}>
+                  {form.leaseImage && !form.leaseDocumentName?.endsWith('.pdf') ? "Photo Attached" : "Upload Photo Copy"}
+                </Text>
               </TouchableOpacity>
 
-              <View style={{ height: 100 }} />
-            </>
+              <TouchableOpacity 
+                style={[styles.uploadBtn, form.leaseDocumentName?.endsWith('.pdf') ? { borderColor: Colors.success } : null]} 
+                onPress={pickDocument}
+              >
+                <Ionicons 
+                  name={form.leaseDocumentName?.endsWith('.pdf') ? "checkmark-circle" : "document-attach-outline"} 
+                  size={24} 
+                  color={form.leaseDocumentName?.endsWith('.pdf') ? Colors.success : Colors.accent} 
+                />
+                <Text style={[styles.uploadBtnText, form.leaseDocumentName?.endsWith('.pdf') ? { color: Colors.success } : null]}>
+                  {form.leaseDocumentName?.endsWith('.pdf') ? `Attached: ${form.leaseDocumentName}` : "Upload Digital PDF"}
+                </Text>
+              </TouchableOpacity>
+            </Animated.View>
           )}
+
+          <TouchableOpacity 
+            style={styles.primaryBtn} 
+            onPress={() => step === 1 ? setStep(2) : handleSubmit()}
+          >
+            <Text style={styles.primaryBtnText}>{step === 1 ? t('nextStep') || "Next Step" : "Next: Customize Clauses"}</Text>
+          </TouchableOpacity>
+
+          <View style={{ height: 100 }} />
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -269,9 +305,9 @@ function InputGroup({ label, placeholder, value, onChangeText, keyboardType = "d
   return (
     <View style={styles.inputGroup}>
       <Text style={styles.label}>{label}</Text>
-      <TextInput
-        style={styles.input}
-        placeholder={placeholder}
+      <TextInput 
+        style={styles.input} 
+        placeholder={placeholder} 
         placeholderTextColor={Colors.textSecondary}
         keyboardType={keyboardType}
         value={value}
@@ -283,7 +319,7 @@ function InputGroup({ label, placeholder, value, onChangeText, keyboardType = "d
 
 function TypeOption({ label, icon, selected, onPress }: any) {
   return (
-    <TouchableOpacity
+    <TouchableOpacity 
       style={[styles.typeBox, selected && styles.typeBoxSelected]}
       onPress={onPress}
     >
@@ -410,99 +446,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   uploadBtnText: {
-    fontSize: 16,
-    fontWeight: "800",
+    fontSize: 14,
+    fontWeight: "700",
     color: Colors.accent,
     marginTop: 8,
     textAlign: "center",
-  },
-  uploadSubtext: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    marginTop: 4,
-    fontWeight: "600",
-    textAlign: 'center',
-  },
-  uploadBtnDisabled: {
-    opacity: 0.7,
-  },
-  summaryBox: {
-    backgroundColor: "#F8FAFC",
-    borderRadius: Radius.m,
-    padding: Spacing.m,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    marginTop: Spacing.m,
-  },
-  summaryHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 6,
-    gap: 6,
-  },
-  summaryTitle: {
-    fontSize: 13,
-    fontWeight: "800",
-    color: Colors.textPrimary,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  summaryText: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    lineHeight: 20,
-    fontWeight: "500",
-  },
-  successContainer: {
-    alignItems: "center",
-    paddingVertical: 40,
-  },
-  successIconCircle: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: "#ECFDF5",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 24,
-  },
-  successTitle: {
-    fontSize: 28,
-    fontWeight: "800",
-    color: Colors.textPrimary,
-    marginBottom: 12,
-    textAlign: "center",
-  },
-  successDesc: {
-    fontSize: 16,
-    color: Colors.textSecondary,
-    textAlign: "center",
-    lineHeight: 24,
-    marginBottom: 32,
-    paddingHorizontal: 20,
-  },
-  summaryResultCard: {
-    backgroundColor: "#F8FAFC",
-    borderRadius: Radius.m,
-    padding: Spacing.l,
-    width: "100%",
-    borderWidth: 1,
-    borderColor: Colors.border,
-    marginBottom: 40,
-  },
-  summaryResultTitle: {
-    fontSize: 14,
-    fontWeight: "800",
-    color: Colors.accent,
-    textTransform: "uppercase",
-    marginBottom: 8,
-    letterSpacing: 1,
-  },
-  summaryResultText: {
-    fontSize: 15,
-    color: Colors.textPrimary,
-    lineHeight: 22,
-    fontWeight: "500",
   },
   primaryBtn: {
     backgroundColor: Colors.accent,
@@ -520,5 +468,22 @@ const styles = StyleSheet.create({
     color: Colors.white,
     fontSize: 16,
     fontWeight: "bold",
+  },
+  analyzingBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ECFDF5',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 20,
+    gap: 12,
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+  },
+  analyzingText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#065F46',
   },
 });

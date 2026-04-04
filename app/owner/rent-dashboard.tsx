@@ -1,6 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
+import { useLanguage } from "../../hooks/useLanguage";
+import { usePropertyStore } from "../../store/propertyStore";
 import {
   SafeAreaView,
   ScrollView,
@@ -14,46 +16,21 @@ import {
 import Animated, { FadeInUp } from "react-native-reanimated";
 import { Colors, Radius, Spacing } from "../../constants/Theme";
 
-// Mock data sorted by due date
-const propertiesData = [
-  {
-    id: "1",
-    name: "Sunshine Apartments",
-    unit: "Flat 402",
-    tenant: "John Doe",
-    rent: "₹25,000",
-    status: "Received", // Changed from Paid
-    dueDate: "2024-04-01",
-    daysLeft: 0,
-  },
-  {
-    id: "2",
-    name: "Green Valley Flats",
-    unit: "Villa 9",
-    tenant: "Sarah Smith",
-    rent: "₹23,500",
-    status: "Due",
-    dueDate: "2024-04-05",
-    daysLeft: 3,
-  },
-  {
-    id: "3",
-    name: "Skyline Residency",
-    unit: "Suite 101",
-    tenant: "Michael Ross",
-    rent: "₹30,000",
-    status: "Due",
-    dueDate: "2024-04-10",
-    daysLeft: 8,
-  },
-];
-
-import { useLanguage } from "../../hooks/useLanguage";
-
 export default function RentDashboardScreen() {
-  const router = useRouter();
   const { t, n } = useLanguage();
+  const properties = usePropertyStore((state) => state.properties);
   const [requestedIds, setRequestedIds] = useState<string[]>([]);
+
+  // Dynamic calculations
+  const totalMonthlyRent = properties.reduce((acc, p) => acc + (parseInt(p.rent) || 0), 0);
+  const receivedRent = properties
+    .filter(p => p.status === 'Received')
+    .reduce((acc, p) => acc + (parseInt(p.rent) || 0), 0);
+
+  const formattedProperties = properties.map(p => ({
+    ...p,
+    daysLeft: p.status === 'Received' ? 0 : 5 // Simplified logic for demo
+  }));
 
   const handleRequest = (id: string, tenant: string) => {
     if (requestedIds.includes(id)) return;
@@ -87,19 +64,19 @@ export default function RentDashboardScreen() {
         >
           <View style={styles.summaryItem}>
             <Text style={styles.summaryLabel}>{t('totalMonthlyRent')}</Text>
-            <Text style={styles.summaryValue}>₹{n('78,500')}</Text>
+            <Text style={styles.summaryValue}>₹{n(totalMonthlyRent.toLocaleString())}</Text>
           </View>
           <View style={styles.summaryDivider} />
           <View style={styles.summaryItem}>
             <Text style={styles.summaryLabel}>{t('received')}</Text>
-            <Text style={[styles.summaryValue, { color: Colors.success }]}>₹{n('25,000')}</Text>
+            <Text style={[styles.summaryValue, { color: Colors.success }]}>₹{n(receivedRent.toLocaleString())}</Text>
           </View>
         </Animated.View>
 
         <Text style={styles.sectionTitle}>{t('propertyRentDetails')}</Text>
 
         {/* Property List Sorted by Due Date */}
-        {propertiesData.map((prop, index) => (
+        {formattedProperties.map((prop, index) => (
           <Animated.View
             key={prop.id}
             entering={FadeInUp.delay(200 + index * 100).duration(500)}
@@ -108,7 +85,7 @@ export default function RentDashboardScreen() {
             <View style={styles.cardHeader}>
               <View>
                 <Text style={styles.propName}>{prop.name}</Text>
-                <Text style={styles.unitText}>{prop.unit} • {prop.tenant}</Text>
+                <Text style={styles.unitText}>{prop.unit} • {prop.tenantName}</Text>
               </View>
               <View style={[styles.statusBadge, prop.status === "Received" ? styles.paidBadge : styles.dueBadge]}>
                 <Text style={[styles.statusText, prop.status === "Received" ? styles.paidText : styles.dueText]}>
@@ -120,21 +97,21 @@ export default function RentDashboardScreen() {
             <View style={styles.cardFooter}>
               <View>
                 <Text style={styles.footerLabel}>{t('monthlyRent')}</Text>
-                <Text style={styles.footerValue}>{n(prop.rent)}</Text>
+                <Text style={styles.footerValue}>₹{n(parseInt(prop.rent).toLocaleString())}</Text>
               </View>
               <View style={styles.dueDateContainer}>
                 <Ionicons
                   name="calendar-outline"
                   size={14}
-                  color={prop.status === "Due" ? Colors.danger : Colors.textSecondary}
+                  color={prop.status !== "Received" ? Colors.danger : Colors.textSecondary}
                 />
-                <Text style={[styles.dueDateText, prop.status === "Due" && { color: Colors.danger }]}>
+                <Text style={[styles.dueDateText, prop.status !== "Received" && { color: Colors.danger }]}>
                   {t('due')}: {n(prop.dueDate)}
                 </Text>
               </View>
             </View>
 
-            {prop.status === "Due" && (
+            {prop.status !== "Received" && (
               <View style={styles.actionRow}>
                 <View style={styles.alertContainer}>
                   <Ionicons name="time-outline" size={16} color="#D97706" />
@@ -145,7 +122,7 @@ export default function RentDashboardScreen() {
                     styles.requestBtn, 
                     requestedIds.includes(prop.id) && { backgroundColor: Colors.border }
                   ]}
-                  onPress={() => handleRequest(prop.id, prop.tenant)}
+                  onPress={() => handleRequest(prop.id, prop.tenantName)}
                   disabled={requestedIds.includes(prop.id)}
                 >
                   <Ionicons 

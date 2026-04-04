@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   StatusBar,
   Image,
-  Dimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -22,7 +21,6 @@ import Animated, {
   withSequence 
 } from "react-native-reanimated";
 
-const { width } = Dimensions.get("window");
 
 export default function WelcomeScreen() {
   const router = useRouter();
@@ -38,7 +36,7 @@ export default function WelcomeScreen() {
       -1,
       true
     );
-  }, []);
+  }, [logoScale]);
 
   const animatedLogoStyle = useAnimatedStyle(() => ({
     transform: [{ scale: logoScale.value }],
@@ -58,7 +56,7 @@ export default function WelcomeScreen() {
           />
         </Animated.View>
 
-        {/* Text Section /}
+        {/* Text Section */}
         <Animated.View 
           entering={FadeInUp.delay(300).duration(800)}
           style={styles.textGroup}
@@ -67,7 +65,7 @@ export default function WelcomeScreen() {
           <Text style={styles.subtitle}>Management that starts after move-in.</Text>
         </Animated.View>
 
-        {/ Action Buttons */}
+        {/* Action Buttons */}
         <View style={styles.footer}>
           <Animated.View entering={FadeInDown.delay(500).duration(800)}>
             <TouchableOpacity 

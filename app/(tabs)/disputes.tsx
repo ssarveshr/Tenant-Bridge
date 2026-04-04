@@ -12,6 +12,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { Colors, Spacing, Radius } from "../../constants/Theme";
 import Animated, { FadeInDown } from "react-native-reanimated";
+import { getDisputes } from "../../store/disputeStore";
 
 export default function DisputesScreen() {
   const router = useRouter();
@@ -46,25 +47,25 @@ export default function DisputesScreen() {
 
         <Text style={styles.sectionTitle}>Active Resolutions</Text>
         
-        <DisputeCard 
-          title="Water Leakage in Bathroom"
-          status="AI Reviewing"
-          timestamp="2 hours ago"
-          category="Maintenance"
-          statusColor={Colors.warning}
-          index={0}
-          onPress={() => router.push("/dispute-verdict" as any)}
-        />
-        <DisputeCard 
-          title="Rent Calculation (March)"
-          status="Resolved"
-          timestamp="2 days ago"
-          category="Financial"
-          statusColor={Colors.success}
-          index={1}
-          resolved
-          onPress={() => router.push("/dispute-verdict" as any)}
-        />
+        {getDisputes().map((dispute, index) => (
+          <DisputeCard 
+            key={dispute.id}
+            title={dispute.title}
+            status={dispute.status === 'Pending' ? "AI Reviewing" : dispute.status}
+            timestamp={dispute.date}
+            category={dispute.category}
+            statusColor={dispute.status === 'Resolved' ? Colors.success : Colors.warning}
+            index={index}
+            resolved={dispute.status === 'Resolved'}
+            onPress={() => router.push("/dispute-verdict" as any)}
+          />
+        ))}
+
+        {getDisputes().length === 0 && (
+          <Text style={{ textAlign: 'center', color: Colors.textSecondary, marginTop: 40 }}>
+            No active resolutions found.
+          </Text>
+        )}
 
         <View style={{ height: 100 }} />
       </ScrollView>

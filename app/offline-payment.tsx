@@ -8,7 +8,6 @@ import {
   StatusBar,
   ScrollView,
   TextInput,
-  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -44,7 +43,7 @@ export default function OfflinePaymentScreen() {
           <Animated.View entering={FadeInUp.duration(500)}>
             <Text style={styles.sectionTitle}>Record Evidence</Text>
             <Text style={styles.sectionDesc}>
-              If you've paid via Cash, UPI, or Bank Transfer manually, please upload the receipt here for owner verification.
+              If you{"'"}ve paid via Cash, UPI, or Bank Transfer manually, please upload the receipt here for owner verification.
             </Text>
 
             <View style={styles.form}>
