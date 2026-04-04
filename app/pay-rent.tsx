@@ -144,21 +144,7 @@ export default function PayRentScreen() {
           <Ionicons name="chevron-forward" size={24} color={Colors.border} />
         </TouchableOpacity>
 
-        <TouchableOpacity 
-          style={[styles.methodCard, { marginTop: Spacing.m }, isLoading && { opacity: 0.5 }]} 
-          activeOpacity={0.8}
-          disabled={isLoading}
-          onPress={() => console.log("Offline Flow Started")}
-        >
-          <View style={[styles.iconBox, { backgroundColor: "#F0FDF4" }]}>
-            <Ionicons name="camera-outline" size={28} color={Colors.success} />
-          </View>
-          <View style={styles.methodInfo}>
-            <Text style={styles.methodTitle}>Record Offline Payment</Text>
-            <Text style={styles.methodDesc}>Upload receipt for verification</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={24} color={Colors.border} />
-        </TouchableOpacity>
+        
 
         <View style={styles.payoutPolicy}>
           <Ionicons name="shield-checkmark-outline" size={20} color={Colors.textSecondary} />

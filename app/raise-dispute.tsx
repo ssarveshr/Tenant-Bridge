@@ -14,13 +14,96 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { Colors, Spacing, Radius } from "../constants/Theme";
-import Animated, { FadeInUp } from "react-native-reanimated";
+import Animated, { FadeInUp, FadeIn, Layout } from "react-native-reanimated";
 import { useLanguage } from "../hooks/useLanguage";
+import { getDocumentAsync } from "expo-document-picker";
+import { supabase } from "../lib/supabase";
+import { ActivityIndicator, Alert } from "react-native";
+import * as FileSystem from 'expo-file-system/legacy';
+import { decode } from 'base64-arraybuffer';
 
 export default function RaiseDisputeScreen() {
   const router = useRouter();
   const { t } = useLanguage();
   const [category, setCategory] = useState("Maintenance");
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [evidence, setEvidence] = useState<any[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const uploadFileToSupabase = async (uri: string, name: string) => {
+    try {
+      // 1. Read file as Base64 (legacy import is more stable for this)
+      const base64 = await FileSystem.readAsStringAsync(uri, {
+        encoding: "base64",
+      });
+
+      // 2. Decode to ArrayBuffer (Supabase handles this perfectly)
+      const arrayBuffer = decode(base64);
+      
+      const fileExt = name.split('.').pop();
+      const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`;
+      const filePath = `disputes/${fileName}`;
+
+      // 3. Upload the binary ArrayBuffer
+      const { data, error } = await supabase.storage
+        .from('dispute-evidence')
+        .upload(filePath, arrayBuffer, {
+          contentType: name.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'image/jpeg',
+          upsert: false
+        });
+
+      if (error) throw error;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('dispute-evidence')
+        .getPublicUrl(filePath);
+
+      return { publicUrl, filePath, name };
+    } catch (error: any) {
+      console.error("Upload error:", error);
+      Alert.alert("Upload Failed", error.message || "Error uploading file");
+      return null;
+    }
+  };
+
+  const handlePickEvidence = async () => {
+    try {
+      const result = await getDocumentAsync({
+        type: ["image/*", "video/*", "application/pdf"],
+        multiple: true,
+        copyToCacheDirectory: true,
+      });
+
+      if (!result.canceled) {
+        setIsUploading(true);
+        const uploadedFiles = [];
+        
+        for (const asset of result.assets) {
+          const uploaded = await uploadFileToSupabase(asset.uri, asset.name);
+          if (uploaded) {
+            uploadedFiles.push({
+              ...uploaded,
+              size: asset.size
+            });
+          }
+        }
+        
+        setEvidence([...evidence, ...uploadedFiles]);
+        setIsUploading(false);
+      }
+    } catch (err: any) {
+      console.error("Picker error:", err);
+      setIsUploading(false);
+    }
+  };
+
+  const removeEvidence = (index: number) => {
+    const newEvidence = [...evidence];
+    newEvidence.splice(index, 1);
+    setEvidence(newEvidence);
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -67,6 +150,8 @@ export default function RaiseDisputeScreen() {
               style={styles.input}
               placeholder="Brief summary of the issue"
               placeholderTextColor={Colors.textSecondary}
+              value={title}
+              onChangeText={setTitle}
             />
 
             <Text style={styles.label}>Detailed Description</Text>
@@ -76,12 +161,52 @@ export default function RaiseDisputeScreen() {
               placeholderTextColor={Colors.textSecondary}
               multiline
               numberOfLines={4}
+              value={description}
+              onChangeText={setDescription}
             />
 
-            <TouchableOpacity style={styles.uploadBtn}>
-              <Ionicons name="camera-outline" size={24} color={Colors.accent} />
-              <Text style={styles.uploadBtnText}>Upload Evidence (Photos/Videos)</Text>
+            <TouchableOpacity 
+              style={[styles.uploadBtn, isUploading && styles.uploadBtnDisabled]} 
+              onPress={handlePickEvidence}
+              disabled={isUploading}
+            >
+              {isUploading ? (
+                <ActivityIndicator color={Colors.accent} size="small" />
+              ) : (
+                <Ionicons name="camera-outline" size={24} color={Colors.accent} />
+              )}
+              <Text style={styles.uploadBtnText}>
+                {isUploading ? "Uploading Evidence..." : "Upload Evidence (Photos/Videos/PDF)"}
+              </Text>
             </TouchableOpacity>
+
+            {/* Evidence List */}
+            {evidence.length > 0 && (
+              <View style={styles.evidenceList}>
+                {evidence.map((item, index) => (
+                  <Animated.View 
+                    key={index} 
+                    entering={FadeIn} 
+                    layout={Layout.springify()}
+                    style={styles.evidenceItem}
+                  >
+                    <View style={styles.evidenceLeft}>
+                      <Ionicons 
+                        name={item.name.toLowerCase().endsWith('.pdf') ? "document" : "image"} 
+                        size={20} 
+                        color={Colors.textSecondary} 
+                      />
+                      <Text style={styles.evidenceName} numberOfLines={1}>
+                        {item.name}
+                      </Text>
+                    </View>
+                    <TouchableOpacity onPress={() => removeEvidence(index)}>
+                      <Ionicons name="close-circle" size={20} color="#FF4D4D" />
+                    </TouchableOpacity>
+                  </Animated.View>
+                ))}
+              </View>
+            )}
 
             <View style={styles.aiNotice}>
               <Ionicons name="sparkles-outline" size={20} color={Colors.accent} />
@@ -241,5 +366,34 @@ const styles = StyleSheet.create({
     color: Colors.white,
     fontSize: 16,
     fontWeight: "bold",
+  },
+  uploadBtnDisabled: {
+    opacity: 0.7,
+  },
+  evidenceList: {
+    marginTop: 16,
+    gap: 8,
+  },
+  evidenceItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: Colors.white,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  evidenceLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+    marginRight: 12,
+  },
+  evidenceName: {
+    fontSize: 14,
+    color: Colors.textPrimary,
+    marginLeft: 8,
+    fontWeight: "600",
   },
 });
