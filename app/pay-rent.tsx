@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -6,21 +6,105 @@ import {
   TouchableOpacity,
   SafeAreaView,
   StatusBar,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { Colors, Spacing, Radius } from "../constants/Theme";
 import Animated, { FadeInUp } from "react-native-reanimated";
+import RazorpayCheckout from "react-native-razorpay";
+import axios from "axios";
+import { supabase } from "../lib/supabase";
+
+// Important: Define these in your root `.env` file!
+// e.g. EXPO_PUBLIC_BACKEND_URL=http://YOUR_LOCAL_IP:5000/api/payment
+// e.g. EXPO_PUBLIC_RAZORPAY_KEY_ID=YOUR_TEST_KEY_ID
+const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || "http://192.168.1.100:5000/api/payment";
+const RAZORPAY_KEY_ID = process.env.EXPO_PUBLIC_RAZORPAY_KEY_ID || "YOUR_TEST_KEY_ID";
 
 export default function PayRentScreen() {
   const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
+  const paymentAmount = 25020; // Example dynamic rent outstanding amount
+
+  const handleOnlinePayment = async () => {
+    setIsLoading(true);
+    try {
+      // 1. Get Logged in User ID from Supabase
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        Alert.alert("Authentication Error", "You must be logged in to pay rent.");
+        setIsLoading(false);
+        return;
+      }
+
+      // 2. We request our backend to securely create an Order with Razorpay
+      const { data: order } = await axios.post(`${BACKEND_URL}/create-order`, {
+        amount: paymentAmount,
+      });
+
+      // 3. Setup Razorpay UI Options
+      const options = {
+        description: "Monthly Rent Payment",
+        image: "https://i.imgur.com/3g7nmJC.png", // Demo logo
+        currency: "INR",
+        key: RAZORPAY_KEY_ID,
+        amount: order.amount,
+        name: "Tenant-Bridge",
+        order_id: order.id,
+        prefill: {
+          email: user.email || "demo@example.com",
+          contact: "9876543210", // Fallback number, user will get this field prefilled
+          name: "Verified Tenant",
+        },
+        theme: { color: Colors.accent },
+      };
+
+      // 4. Open Razorpay Native Checkout
+      RazorpayCheckout.open(options)
+        .then(async (data: any) => {
+          // Success Response Callback
+          try {
+            // 5. Send tokens to backend to cryptographically verify signature
+            const verifyResp = await axios.post(`${BACKEND_URL}/verify-payment`, {
+              razorpay_payment_id: data.razorpay_payment_id,
+              razorpay_order_id: data.razorpay_order_id,
+              razorpay_signature: data.razorpay_signature,
+              user_id: user.id,
+              amount: paymentAmount,
+            });
+
+            if (verifyResp.data.verified) {
+              Alert.alert("Success!", "Rent payment of ₹" + paymentAmount + " was successful and verified.");
+              // router.replace("/(tabs)/transactions") // Or navigate away
+            }
+          } catch (error: any) {
+            console.error("Verification failed:", error);
+            Alert.alert("Verification Error", "Payment captured, but server failed to verify signature.");
+          }
+        })
+        .catch((error: any) => {
+          // Error or Checkout Closed callback
+          console.error(error);
+          Alert.alert("Payment Failed", `Error: ${error.code} | ${error.description}`);
+        })
+        .finally(() => {
+          setIsLoading(false);
+        });
+    } catch (error: any) {
+      console.error(error);
+      Alert.alert("Order Error", "Failed to communicate with our server to start checkout.");
+      setIsLoading(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
       
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => router.back()} disabled={isLoading}>
           <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Pay Rent</Text>
@@ -35,10 +119,19 @@ export default function PayRentScreen() {
         </View>
 
         <Text style={styles.sectionTitle}>Select Payment Method</Text>
-        
-        <TouchableOpacity style={styles.methodCard} activeOpacity={0.8}>
+
+        <TouchableOpacity 
+          style={styles.methodCard} 
+          activeOpacity={0.8}
+          onPress={handleOnlinePayment}
+          disabled={isLoading}
+        >
           <View style={styles.iconBox}>
-            <Ionicons name="card-outline" size={28} color={Colors.accent} />
+            {isLoading ? (
+              <ActivityIndicator color={Colors.accent} />
+            ) : (
+              <Ionicons name="card-outline" size={28} color={Colors.accent} />
+            )}
           </View>
           <View style={styles.methodInfo}>
             <Text style={styles.methodTitle}>Pay Online</Text>
@@ -48,8 +141,9 @@ export default function PayRentScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity 
-          style={[styles.methodCard, { marginTop: Spacing.m }]} 
+          style={[styles.methodCard, { marginTop: Spacing.m }, isLoading && { opacity: 0.5 }]} 
           activeOpacity={0.8}
+          disabled={isLoading}
           onPress={() => console.log("Offline Flow Started")}
         >
           <View style={[styles.iconBox, { backgroundColor: "#F0FDF4" }]}>

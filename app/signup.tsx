@@ -12,9 +12,12 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
 import Animated, { FadeInUp } from "react-native-reanimated";
 import { Colors, Radius, Spacing } from "../constants/Theme";
+import { supabase } from "../lib/supabase";
 
 export default function SignupScreen() {
   const router = useRouter();
@@ -25,10 +28,61 @@ export default function SignupScreen() {
     password: "",
   });
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSignup = () => {
-    // Navigate to role selection
-    router.push("/role-selection" as any);
+  const handleSignup = async () => {
+    if (!formData.name || !formData.email || !formData.phone || !formData.password) {
+      Alert.alert("Error", "Please fill in all fields.");
+      return;
+    }
+
+    if (formData.phone.length !== 10) {
+      Alert.alert("Error", "Please enter a valid 10-digit phone number.");
+      return;
+    }
+
+    setIsLoading(true);
+    const phoneNumber = `+91${formData.phone}`; // Add country code
+
+    try {
+      // 1. Sign up the user with Email and Password
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          data: {
+            name: formData.name,
+            phone: phoneNumber
+          }
+        }
+      });
+
+      if (signUpError) {
+        Alert.alert("Signup Failed", signUpError.message);
+        setIsLoading(false);
+        return;
+      }
+
+      // 2. We can try to send an OTP to the phone for verification
+      const { error: otpError } = await supabase.auth.signInWithOtp({
+        phone: phoneNumber,
+      });
+
+      if (otpError) {
+        Alert.alert("Note", "Account created, but couldn't send SMS OTP: " + otpError.message);
+      }
+
+      // 3. Navigate to verify-otp 
+      router.push({
+        pathname: "/verify-otp",
+        params: { ...formData, formattedPhone: phoneNumber, isSignup: "true" }
+      } as any);
+
+    } catch (err: any) {
+      Alert.alert("Unexpected Error", err.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -128,11 +182,16 @@ export default function SignupScreen() {
               </View>
 
               <TouchableOpacity
-                style={styles.button}
+                style={[styles.button, isLoading && styles.buttonDisabled]}
                 activeOpacity={0.9}
                 onPress={handleSignup}
+                disabled={isLoading}
               >
-                <Text style={styles.buttonText}>Create Account</Text>
+                {isLoading ? (
+                  <ActivityIndicator color={Colors.white} />
+                ) : (
+                  <Text style={styles.buttonText}>Create Account</Text>
+                )}
               </TouchableOpacity>
 
               <TouchableOpacity style={styles.switchLink} onPress={() => router.push("/login" as any)}>
@@ -234,6 +293,9 @@ const styles = StyleSheet.create({
     shadowRadius: 20,
     elevation: 8,
     marginTop: 10,
+  },
+  buttonDisabled: {
+    opacity: 0.7,
   },
   buttonText: {
     color: Colors.white,

@@ -11,6 +11,8 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
 import Animated, {
   FadeInUp,
@@ -20,16 +22,18 @@ import Animated, {
   withTiming
 } from "react-native-reanimated";
 import { Colors, Radius, Spacing } from "../constants/Theme";
+import { supabase } from "../lib/supabase";
 
 type LoginMode = 'password' | 'otp';
 
 export default function LoginScreen() {
   const router = useRouter();
-  const [mode, setMode] = useState<LoginMode>('password');
+  const [mode, setMode] = useState<LoginMode>('otp'); // Default to OTP per user requirements
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [phone, setPhone] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const buttonScale = useSharedValue(1);
 
@@ -45,15 +49,45 @@ export default function LoginScreen() {
     buttonScale.value = withTiming(1, { duration: 100 });
   };
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
+    setIsLoading(true);
     if (mode === 'otp') {
-      router.push({
-        pathname: "/verify-otp",
-        params: { phone }
-      } as any);
+      if (phone.length !== 10) {
+        Alert.alert("Error", "Please enter a valid 10-digit phone number.");
+        setIsLoading(false);
+        return;
+      }
+      const phoneNumber = `+91${phone}`;
+      const { error } = await supabase.auth.signInWithOtp({
+        phone: phoneNumber,
+      });
+
+      if (error) {
+        Alert.alert("Login Failed", error.message);
+      } else {
+        router.push({
+          pathname: "/verify-otp",
+          params: { phone, formattedPhone: phoneNumber }
+        } as any);
+      }
     } else {
-      router.push("/role-selection" as any);
+      // Basic implementation for password login (if they still want to use it)
+      if (!email || !password) {
+        Alert.alert("Error", "Please enter email and password.");
+        setIsLoading(false);
+        return;
+      }
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (error) {
+        Alert.alert("Login Failed", error.message);
+      } else {
+        router.push("/role-selection" as any);
+      }
     }
+    setIsLoading(false);
   };
 
   return (
@@ -163,15 +197,20 @@ export default function LoginScreen() {
 
             <Animated.View style={buttonAnimatedStyle}>
               <TouchableOpacity
-                style={styles.button}
+                style={[styles.button, isLoading && styles.buttonDisabled]}
                 activeOpacity={0.9}
                 onPressIn={handlePressIn}
                 onPressOut={handlePressOut}
                 onPress={handleLogin}
+                disabled={isLoading}
               >
-                <Text style={styles.buttonText}>
-                  {mode === 'password' ? 'Login' : 'Send OTP'}
-                </Text>
+                {isLoading ? (
+                  <ActivityIndicator color={Colors.white} />
+                ) : (
+                  <Text style={styles.buttonText}>
+                    {mode === 'password' ? 'Login' : 'Send OTP'}
+                  </Text>
+                )}
               </TouchableOpacity>
             </Animated.View>
 
@@ -321,6 +360,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 15,
     elevation: 8,
+  },
+  buttonDisabled: {
+    opacity: 0.7,
   },
   buttonText: {
     color: Colors.white,

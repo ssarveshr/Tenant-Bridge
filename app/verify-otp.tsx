@@ -11,15 +11,31 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
 import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
 import { Colors, Radius, Spacing } from "../constants/Theme";
+import { supabase } from "../lib/supabase";
 
 export default function VerifyOtpScreen() {
   const router = useRouter();
-  const { phone } = useLocalSearchParams<{ phone: string }>();
+  // Using useLocalSearchParams instead of useGlobalSearchParams typically, but depends on Expo Router version
+  const params = useLocalSearchParams<{
+    phone?: string;
+    formattedPhone?: string;
+    isSignup?: string;
+    name?: string;
+    email?: string;
+  }>();
+
+  const phone = params.phone || "";
+  const formattedPhone = params.formattedPhone || "";
+  const isSignup = params.isSignup === "true";
+
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [timer, setTimer] = useState(30);
+  const [isLoading, setIsLoading] = useState(false);
   const inputRefs = useRef<Array<TextInput | null>>([]);
 
   useEffect(() => {
@@ -46,9 +62,64 @@ export default function VerifyOtpScreen() {
     }
   };
 
-  const handleVerify = () => {
-    // Navigate to role selection after verification
-    router.push("/role-selection" as any);
+  const handleResend = async () => {
+    if (!formattedPhone) return;
+    setTimer(30);
+    const { error } = await supabase.auth.signInWithOtp({
+      phone: formattedPhone,
+    });
+    if (error) {
+      Alert.alert("Error resending OTP", error.message);
+    } else {
+      Alert.alert("Success", "OTP resent successfully");
+    }
+  };
+
+  const handleVerify = async () => {
+    const otpCode = otp.join("");
+    if (otpCode.length !== 6) {
+      Alert.alert("Error", "Please enter a valid 6-digit OTP");
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const { data, error } = await supabase.auth.verifyOtp({
+        phone: formattedPhone,
+        token: otpCode,
+        type: "sms",
+      });
+
+      if (error) {
+        Alert.alert("Verification Failed", error.message);
+        setIsLoading(false);
+        return;
+      }
+
+      // If it's a signup flow, insert the additional user data into our custom users table
+      if (isSignup && data.user) {
+        const { error: upsertError } = await supabase.from("users").upsert({
+          id: data.user.id,
+          name: params.name,
+          email: params.email,
+          phone_number: formattedPhone,
+        }, { onConflict: 'id' });
+
+        if (upsertError) {
+          console.error("Error creating user profile", upsertError);
+          // Non-blocking error alert, but continues since auth succeeded
+          Alert.alert("Profile Note", "We couldn't save your profile details, but you can update them later.");
+        }
+      }
+
+      // Navigate to role selection or redirect based on existing user setup
+      router.push("/role-selection" as any);
+    } catch (error: any) {
+      Alert.alert("Unexpected Error", error.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -69,7 +140,7 @@ export default function VerifyOtpScreen() {
           <Animated.View entering={FadeInUp.delay(100).duration(500)}>
             <Text style={styles.title}>Verify OTP</Text>
             <Text style={styles.subtitle}>
-              We've sent a code to <Text style={styles.phoneHighlight}>+91 {phone || "9876543210"}</Text>
+              We've sent a code to <Text style={styles.phoneHighlight}>+91 {phone || "(unknown)"}</Text>
             </Text>
           </Animated.View>
 
@@ -94,10 +165,15 @@ export default function VerifyOtpScreen() {
 
           <Animated.View entering={FadeInDown.delay(300).duration(500)} style={styles.footer}>
             <TouchableOpacity
-              style={styles.button}
+              style={[styles.button, isLoading && styles.buttonDisabled]}
               onPress={handleVerify}
+              disabled={isLoading}
             >
-              <Text style={styles.buttonText}>Verify & Continue</Text>
+              {isLoading ? (
+                <ActivityIndicator color={Colors.white} />
+              ) : (
+                <Text style={styles.buttonText}>Verify & Continue</Text>
+              )}
             </TouchableOpacity>
 
             <View style={styles.resendContainer}>
@@ -105,7 +181,7 @@ export default function VerifyOtpScreen() {
               {timer > 0 ? (
                 <Text style={styles.timerText}>Resend in {timer}s</Text>
               ) : (
-                <TouchableOpacity onPress={() => setTimer(30)}>
+                <TouchableOpacity onPress={handleResend}>
                   <Text style={styles.resendLink}>Resend Now</Text>
                 </TouchableOpacity>
               )}
@@ -200,6 +276,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 15,
     elevation: 8,
+  },
+  buttonDisabled: {
+    opacity: 0.7,
   },
   buttonText: {
     color: Colors.white,
