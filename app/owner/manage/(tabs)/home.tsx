@@ -17,6 +17,7 @@ import Animated, { FadeInUp, FadeInRight } from "react-native-reanimated";
 
 export default function OwnerManageHomeScreen() {
   const router = useRouter();
+  const isRentDue = false; // Sunshine Apartments is currently 'Received' (Previously Paid)
 
   return (
     <SafeAreaView style={styles.container}>
@@ -53,7 +54,7 @@ export default function OwnerManageHomeScreen() {
           <View style={styles.statusRow}>
             <View>
               <Text style={styles.rentLabel}>March Collection Status</Text>
-              <Text style={styles.rentValue}>₹25,000 Paid</Text>
+              <Text style={styles.rentValue}>₹25,000 Received</Text>
             </View>
             <View style={styles.successBadge}>
               <Ionicons name="checkmark-circle" size={18} color={Colors.success} />
@@ -133,15 +134,17 @@ export default function OwnerManageHomeScreen() {
         <View style={{ height: 100 }} />
       </ScrollView>
 
-      {/* Floating Action Button - Collect Rent Request */}
-      <TouchableOpacity 
-        style={styles.fab} 
-        activeOpacity={0.9}
-        onPress={() => console.log("Request Rent Pulse Sent")}
-      >
-        <Ionicons name="paper-plane" size={24} color={Colors.white} />
-        <Text style={styles.fabText}>Request Payment</Text>
-      </TouchableOpacity>
+      {/* Floating Action Button - Collect Rent Request (Only if due) */}
+      {isRentDue && (
+        <TouchableOpacity 
+          style={styles.fab} 
+          activeOpacity={0.9}
+          onPress={() => console.log("Request Rent Pulse Sent")}
+        >
+          <Ionicons name="paper-plane" size={24} color={Colors.white} />
+          <Text style={styles.fabText}>Request Payment</Text>
+        </TouchableOpacity>
+      )}
     </SafeAreaView>
   );
 }

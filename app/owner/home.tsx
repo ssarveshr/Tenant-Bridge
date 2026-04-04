@@ -1,25 +1,46 @@
-import React from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  SafeAreaView,
-  StatusBar,
-} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { Colors, Spacing, Radius } from "../../constants/Theme";
-import Animated, { FadeInUp, FadeInRight } from "react-native-reanimated";
+import React from "react";
+import {
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import Animated, { FadeInRight, FadeInUp } from "react-native-reanimated";
+import { Colors, Radius, Spacing } from "../../constants/Theme";
 
 export default function OwnerHomeScreen() {
   const router = useRouter();
 
+  const notifications = [
+    {
+      id: "1",
+      title: "1 Offline Receipt Uploaded",
+      desc: "Verify ₹25,000 payment from John Doe",
+      icon: "receipt-outline",
+      btnText: "Verify",
+      type: "payment",
+      route: "/owner/verify-payment",
+    },
+    {
+      id: "2",
+      title: "New Dispute Raised",
+      desc: "Tenant Sarah filed a dispute for 'Sunshine Apt'",
+      icon: "alert-circle-outline",
+      btnText: "Resolve",
+      type: "dispute",
+      route: "/dispute-verdict",
+    }
+  ];
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
-      
+
       {/* Header with Portfolio Selector */}
       <View style={styles.header}>
         <View>
@@ -36,12 +57,12 @@ export default function OwnerHomeScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView 
+      <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
         {/* Collection Status Card */}
-        <Animated.View 
+        <Animated.View
           entering={FadeInUp.delay(100).duration(500)}
           style={styles.collectionCard}
         >
@@ -53,33 +74,51 @@ export default function OwnerHomeScreen() {
             </View>
             <Text style={styles.progressDetail}>97% Collected • 1 Pending</Text>
           </View>
-          <TouchableOpacity style={styles.detailsBtn}>
+          <TouchableOpacity 
+            style={styles.detailsBtn}
+            onPress={() => router.push("/owner/rent-dashboard" as any)}
+          >
             <Ionicons name="arrow-forward" size={20} color={Colors.white} />
           </TouchableOpacity>
         </Animated.View>
 
         {/* Action Needed Section */}
         <Text style={styles.sectionTitle}>Requires Attention</Text>
-        <Animated.View 
-          entering={FadeInUp.delay(200).duration(500)}
-          style={styles.attentionCard}
-        >
-          <View style={styles.attentionLeft}>
-            <View style={styles.attentionIconCircle}>
-              <Ionicons name="alert-circle" size={24} color={Colors.warning} />
-            </View>
-            <View>
-              <Text style={styles.attentionTitle}>1 Offline Receipt Uploaded</Text>
-              <Text style={styles.attentionDesc}>Verify ₹25,000 payment from John Doe</Text>
-            </View>
-          </View>
-          <TouchableOpacity 
-            style={styles.verifyBtn}
-            onPress={() => router.push("/owner/verify-payment" as any)}
-          >
-            <Text style={styles.verifyBtnText}>Verify</Text>
-          </TouchableOpacity>
-        </Animated.View>
+        <View style={styles.notificationList}>
+          {notifications.map((notif, index) => (
+            <Animated.View
+              key={notif.id}
+              entering={FadeInUp.delay(200 + index * 100).duration(500)}
+              style={styles.attentionCard}
+            >
+              <View style={styles.attentionLeft}>
+                <View style={[
+                  styles.attentionIconCircle, 
+                  { backgroundColor: notif.type === 'dispute' ? '#FEF2F2' : '#FFF7ED' }
+                ]}>
+                  <Ionicons 
+                    name={notif.icon as any} 
+                    size={24} 
+                    color={notif.type === 'dispute' ? Colors.danger : Colors.warning} 
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.attentionTitle}>{notif.title}</Text>
+                  <Text style={styles.attentionDesc} numberOfLines={1}>{notif.desc}</Text>
+                </View>
+              </View>
+              <TouchableOpacity
+                style={[
+                  styles.verifyBtn, 
+                  notif.type === 'dispute' && { backgroundColor: Colors.danger }
+                ]}
+                onPress={() => router.push(notif.route as any)}
+              >
+                <Text style={styles.verifyBtnText}>{notif.btnText}</Text>
+              </TouchableOpacity>
+            </Animated.View>
+          ))}
+        </View>
 
         {/* Properties Section */}
         <View style={styles.propertiesHeader}>
@@ -90,15 +129,15 @@ export default function OwnerHomeScreen() {
         </View>
 
         <View style={styles.propertyGrid}>
-          <PropertyMiniCard 
+          <PropertyMiniCard
             name="Sunshine Apartments"
             unit="Flat 402"
             tenant="John Doe"
-            status="Paid"
+            status="Received"
             statusColor={Colors.success}
             delay={300}
           />
-          <PropertyMiniCard 
+          <PropertyMiniCard
             name="Green Valley Flats"
             unit="Villa 9"
             tenant="Sarah Smith"
@@ -112,17 +151,17 @@ export default function OwnerHomeScreen() {
         <Text style={styles.sectionTitle}>Portfolio Stats</Text>
         <View style={styles.statsGrid}>
           <StatCard label="Active Leases" value="2" icon="documents-outline" delay={500} />
-          <TouchableOpacity 
-            style={{ flex: 1 }} 
+          <TouchableOpacity
+            style={{ flex: 1 }}
             onPress={() => router.push("/credit-score" as any)}
             activeOpacity={0.8}
           >
-            <StatCard 
-              label="Owner Score" 
-              value="100/100" 
-              icon="star-outline" 
-              delay={600} 
-              color={Colors.accent} 
+            <StatCard
+              label="Owner Score"
+              value="100/100"
+              icon="star-outline"
+              delay={600}
+              color={Colors.accent}
             />
           </TouchableOpacity>
         </View>
@@ -131,8 +170,8 @@ export default function OwnerHomeScreen() {
       </ScrollView>
 
       {/* FAB - Add Property */}
-      <TouchableOpacity 
-        style={styles.fab} 
+      <TouchableOpacity
+        style={styles.fab}
         activeOpacity={0.9}
         onPress={() => router.push("/owner/add-property" as any)}
       >
@@ -145,7 +184,7 @@ export default function OwnerHomeScreen() {
 function PropertyMiniCard({ name, unit, tenant, status, statusColor, delay }: any) {
   const router = useRouter();
   return (
-    <Animated.View 
+    <Animated.View
       entering={FadeInUp.delay(delay).duration(500)}
       style={styles.pCard}
     >
@@ -155,7 +194,7 @@ function PropertyMiniCard({ name, unit, tenant, status, statusColor, delay }: an
       </View>
       <Text style={styles.pName}>{name}</Text>
       <Text style={styles.pTenant}>Tenant: {tenant}</Text>
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.pFooter}
         onPress={() => router.push("/owner/manage/(tabs)/home" as any)}
       >
@@ -168,7 +207,7 @@ function PropertyMiniCard({ name, unit, tenant, status, statusColor, delay }: an
 
 function StatCard({ label, value, icon, delay }: any) {
   return (
-    <Animated.View 
+    <Animated.View
       entering={FadeInRight.delay(delay).duration(500)}
       style={styles.sCard}
     >
@@ -188,9 +227,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: Spacing.xl,
-    paddingTop: Spacing.m,
-    paddingBottom: Spacing.l,
+    paddingHorizontal: Spacing.m,
+    paddingTop: Spacing.xxl,
+    paddingBottom: Spacing.s,
+
     backgroundColor: Colors.background,
   },
   portfolioLabel: {
@@ -284,6 +324,10 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     marginBottom: Spacing.m,
   },
+  notificationList: {
+    gap: Spacing.m,
+    marginBottom: Spacing.xxl,
+  },
   attentionCard: {
     backgroundColor: Colors.white,
     borderRadius: Radius.m,
@@ -293,12 +337,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: Spacing.xxl,
   },
   attentionLeft: {
     flexDirection: "row",
     alignItems: "center",
     flex: 1,
+    paddingRight: 8,
   },
   attentionIconCircle: {
     width: 44,
