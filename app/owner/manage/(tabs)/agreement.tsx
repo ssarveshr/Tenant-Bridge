@@ -50,7 +50,6 @@ export default function OwnerManageAgreementScreen() {
             <Text style={styles.docSummaryText}>
               • Monthly rent fixed at ₹25,000.{"\n"}
               • Lease tenure is 12 months with a 2-month notice period.{"\n"}
-              • Tenant responsible for electricity and water utility bills.{"\n"}
               • Security deposit of ₹75,000 held by the owner.{"\n"}
               • Standard 10% rent increment applicable upon renewal.
             </Text>

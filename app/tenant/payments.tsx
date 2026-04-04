@@ -11,8 +11,11 @@ import {
   View,
 } from "react-native";
 
+import { useLanguage } from "../../hooks/useLanguage";
+
 export default function PaymentsScreen() {
   const router = useRouter();
+  const { t, n } = useLanguage();
 
   const navigateTo = (path: string) => {
     router.push(path as any);
@@ -28,8 +31,8 @@ export default function PaymentsScreen() {
       >
         {/* Header Section */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Payments</Text>
-          <Text style={styles.headerSubtitle}>Track and manage your payments</Text>
+          <Text style={styles.headerTitle}>{t('payments')}</Text>
+          <Text style={styles.headerSubtitle}>{t('trackManagePayments')}</Text>
         </View>
 
         <View style={styles.contentBody}>
@@ -37,8 +40,8 @@ export default function PaymentsScreen() {
           <View style={styles.dueCard}>
             <View style={styles.dueCardHeader}>
               <View>
-                <Text style={styles.dueLabel}>Next Payment Due</Text>
-                <Text style={styles.dueAmount}>₹25,000</Text>
+                <Text style={styles.dueLabel}>{t('nextPaymentDue')}</Text>
+                <Text style={styles.dueAmount}>₹{n('25,000')}</Text>
               </View>
               <View style={styles.dueIconContainer}>
                 <Ionicons name="wallet" size={32} color="#fff" />
@@ -48,15 +51,19 @@ export default function PaymentsScreen() {
             <View style={styles.dueDateRow}>
               <View style={styles.dateInfo}>
                 <Ionicons name="calendar-outline" size={16} color="#fff" />
-                <Text style={styles.dueDateText}>April 5, 2026</Text>
+                <Text style={styles.dueDateText}>{n('April 5, 2026')}</Text>
               </View>
               <View style={styles.daysLeftBadge}>
-                <Text style={styles.daysLeftText}>6 days left</Text>
+                <Text style={styles.daysLeftText}>{n(6)} {t('daysLeft')}</Text>
               </View>
             </View>
 
-            <TouchableOpacity style={styles.payNowBtn} activeOpacity={0.8}>
-              <Text style={styles.payNowText}>Pay Now</Text>
+            <TouchableOpacity 
+              style={styles.payNowBtn} 
+              activeOpacity={0.8}
+              onPress={() => router.push("/pay-rent")}
+            >
+              <Text style={styles.payNowText}>{t('payNow')}</Text>
               <Ionicons name="arrow-forward" size={18} color="#1a56f0" />
             </TouchableOpacity>
           </View>
@@ -67,46 +74,50 @@ export default function PaymentsScreen() {
               <View style={[styles.statIconBox, { backgroundColor: "#e6f9f0" }]}>
                 <Ionicons name="checkmark-circle" size={24} color="#00c853" />
               </View>
-              <Text style={styles.statValue}>3</Text>
-              <Text style={styles.statLabel}>On-Time Payments</Text>
+              <Text style={styles.statValue}>{n(3)}</Text>
+              <Text style={styles.statLabel}>{t('onTimePayments')}</Text>
             </View>
 
             <View style={styles.statCard}>
               <View style={[styles.statIconBox, { backgroundColor: "#e6f0ff" }]}>
                 <Ionicons name="wallet" size={24} color="#1a56f0" />
               </View>
-              <Text style={styles.statValue}>₹1.5L</Text>
-              <Text style={styles.statLabel}>Total Paid</Text>
+              <Text style={styles.statValue}>₹{n('1.5L')}</Text>
+              <Text style={styles.statLabel}>{t('totalPaid')}</Text>
             </View>
           </View>
 
           {/* History Section */}
-          <Text style={styles.sectionTitle}>Payment History</Text>
+          <Text style={styles.sectionTitle}>{t('paymentHistory')}</Text>
 
           <HistoryItem
-            title="March 2026"
-            date="Mar 5, 2026"
-            amount="₹25,000"
-            id="TXN1234567890"
+            title={n("March 2026")}
+            date={n("Mar 5, 2026")}
+            amount={"₹" + n("25,000")}
+            id={"TXN" + n("1234567890")}
+            statusText={t('paidBadge')}
           />
           <HistoryItem
-            title="February 2026"
-            date="Feb 5, 2026"
-            amount="₹25,000"
-            id="TXN0987654321"
+            title={n("February 2026")}
+            date={n("Feb 5, 2026")}
+            amount={"₹" + n("25,000")}
+            id={"TXN" + n("0987654321")}
+            statusText={t('paidBadge')}
           />
           <HistoryItem
-            title="January 2026"
-            date="Jan 5, 2026"
-            amount="₹25,000"
-            id="TXN1122334455"
+            title={n("January 2026")}
+            date={n("Jan 5, 2026")}
+            amount={"₹" + n("25,000")}
+            id={"TXN" + n("1122334455")}
+            statusText={t('paidBadge')}
           />
           <HistoryItem
-            title="December 2025"
-            subtitle="Security Deposit"
-            date="Dec 28, 2025"
-            amount="₹75,000"
-            id="TXN5544332211"
+            title={n("December 2025")}
+            subtitle={t('securityDeposit')}
+            date={n("Dec 28, 2025")}
+            amount={"₹" + n("75,000")}
+            id={"TXN" + n("5544332211")}
+            statusText={t('paidBadge')}
           />
 
           {/* Spacer for bottom nav */}
@@ -116,17 +127,17 @@ export default function PaymentsScreen() {
 
       {/* Bottom Tab Bar */}
       <View style={styles.tabBar}>
-        <TabItem icon="home-outline" label="Dashboard" onPress={() => navigateTo("/tenant/dashboard")} />
-        <TabItem icon="document-text-outline" label="Agreements" onPress={() => navigateTo("/tenant/agreements")} />
-        <TabItem icon="wallet" label="Payments" active />
-        <TabItem icon="alert-circle-outline" label="Disputes" onPress={() => navigateTo("/tenant/disputes")} />
-        <TabItem icon="person-outline" label="Profile" />
+        <TabItem icon="home-outline" label={t('dashboard')} onPress={() => navigateTo("/tenant/dashboard")} />
+        <TabItem icon="document-text-outline" label={t('agreements')} onPress={() => navigateTo("/tenant/agreements")} />
+        <TabItem icon="wallet" label={t('payments')} active />
+        <TabItem icon="alert-circle-outline" label={t('disputes')} onPress={() => navigateTo("/tenant/disputes")} />
+        <TabItem icon="person-outline" label={t('profile')} onPress={() => navigateTo("/tenant/profile")} />
       </View>
     </View>
   );
 }
 
-function HistoryItem({ title, subtitle, date, amount, id }: any) {
+function HistoryItem({ title, subtitle, date, amount, id, statusText }: any) {
   return (
     <View style={styles.historyCard}>
       <View style={styles.historyTop}>
@@ -144,7 +155,7 @@ function HistoryItem({ title, subtitle, date, amount, id }: any) {
         <View style={styles.historyRight}>
           <Text style={styles.historyAmount}>{amount}</Text>
           <View style={styles.paidBadge}>
-            <Text style={styles.paidBadgeText}>Paid</Text>
+            <Text style={styles.paidBadgeText}>{statusText}</Text>
           </View>
         </View>
       </View>

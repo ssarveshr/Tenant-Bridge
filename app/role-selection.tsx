@@ -2,18 +2,20 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React from "react";
 import {
-  SafeAreaView,
   StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, { FadeInUp } from "react-native-reanimated";
 import { Colors, Radius, Spacing } from "../constants/Theme";
+import { useLanguage } from "../hooks/useLanguage";
 
 export default function RoleSelection() {
   const router = useRouter();
+  const { t } = useLanguage();
 
   const handleRoleSelect = (role: string) => {
     // Navigate to respective dashboard flow
@@ -32,29 +34,29 @@ export default function RoleSelection() {
           entering={FadeInUp.delay(100).duration(500)}
           style={styles.header}
         >
-          <Text style={styles.title}>Choose your role</Text>
-          <Text style={styles.subtitle}>Our platform adapts based on who you are.</Text>
+          <Text style={styles.title}>{t('chooseRole')}</Text>
+          <Text style={styles.subtitle}>{t('platformAdapts')}</Text>
         </Animated.View>
 
         <View style={styles.roleGrid}>
           <RoleCard
             icon="person-outline"
-            title="Tenant"
-            desc="Move in, pay rent, resolve disputes, and track agreements."
+            title={t('tenant')}
+            desc={t('tenantMode')}
             onPress={() => handleRoleSelect("tenant")}
             delay={200}
           />
           <RoleCard
             icon="home-outline"
-            title="House Owner"
-            desc="Manage properties, verify payments, and handle tenant issues."
+            title={t('houseOwner')}
+            desc={t('ownerMode')}
             onPress={() => handleRoleSelect("owner")}
             delay={300}
           />
         </View>
 
         <Text style={styles.footerNote}>
-          This setting can be changed later in your profile.
+          {t('settingChangeNote')}
         </Text>
       </View>
     </SafeAreaView>

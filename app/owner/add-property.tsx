@@ -17,8 +17,11 @@ import { useRouter } from "expo-router";
 import { Colors, Spacing, Radius } from "../../constants/Theme";
 import Animated, { FadeInUp } from "react-native-reanimated";
 
+import { useLanguage } from "../../hooks/useLanguage";
+
 export default function AddPropertyScreen() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [step, setStep] = useState(1);
   const [form, setForm] = useState({
     name: "",
@@ -52,8 +55,10 @@ export default function AddPropertyScreen() {
       <StatusBar barStyle="dark-content" />
       
       <View style={styles.header}>
-        <View style={{ width: 24 }} />
-        <Text style={styles.headerTitle}>Add New Property</Text>
+        <TouchableOpacity onPress={() => router.back()}>
+          <Ionicons name="chevron-back" size={24} color={Colors.textPrimary} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>{t('addProperty')}</Text>
         <View style={{ width: 24 }} />
       </View>
 
@@ -69,7 +74,7 @@ export default function AddPropertyScreen() {
           <View style={styles.progressArea}>
             <View style={styles.progressHeader}>
               <Text style={styles.stepText}>Step {step} of 2</Text>
-              <Text style={styles.stepLabel}>{step === 1 ? "Property Details" : "Rental Terms"}</Text>
+              <Text style={styles.stepLabel}>{step === 1 ? t('propertyDetails') || "Property Details" : t('rentalTerms') || "Rental Terms"}</Text>
             </View>
             <View style={styles.progressTrack}>
               <View style={[styles.progressFill, { width: step === 1 ? "50%" : "100%" }]} />
@@ -79,34 +84,34 @@ export default function AddPropertyScreen() {
           {step === 1 ? (
             <Animated.View entering={FadeInUp.duration(500)} style={styles.form}>
               <InputGroup 
-                label="Property Name" 
+                label={t('propertyName')} 
                 placeholder="e.g. Sunshine Apartments" 
                 value={form.name}
                 onChangeText={(val: string) => setForm({ ...form, name: val })}
               />
               <InputGroup 
-                label="Unit Number" 
+                label={t('unitNumber')} 
                 placeholder="e.g. Flat 402" 
                 value={form.unit}
                 onChangeText={(val: string) => setForm({ ...form, unit: val })}
               />
               <InputGroup 
-                label="Location" 
+                label={t('location')} 
                 placeholder="Enter locality" 
                 value={form.location}
                 onChangeText={(val: string) => setForm({ ...form, location: val })}
               />
               
-              <Text style={styles.label}>Property Type</Text>
+              <Text style={styles.label}>{t('propertyType')}</Text>
               <View style={styles.typeRow}>
                 <TypeOption 
-                  label="Residential" 
+                  label={t('residential')} 
                   icon="home" 
                   selected={form.type === "Residential"} 
                   onPress={() => setForm({ ...form, type: "Residential" })}
                 />
                 <TypeOption 
-                  label="Commercial" 
+                  label={t('commercial')} 
                   icon="business" 
                   selected={form.type === "Commercial"} 
                   onPress={() => setForm({ ...form, type: "Commercial" })}
@@ -116,21 +121,21 @@ export default function AddPropertyScreen() {
           ) : (
             <Animated.View entering={FadeInUp.duration(500)} style={styles.form}>
               <InputGroup 
-                label="Monthly Rent (₹)" 
+                label={t('monthlyRentWithSymbol')} 
                 placeholder="25000" 
                 keyboardType="numeric" 
                 value={form.rent}
                 onChangeText={(val: string) => setForm({ ...form, rent: val })}
               />
               <InputGroup 
-                label="Security Deposit (₹)" 
+                label={t('securityDepositWithSymbol')} 
                 placeholder="75000" 
                 keyboardType="numeric" 
                 value={form.deposit}
                 onChangeText={(val: string) => setForm({ ...form, deposit: val })}
               />
               <InputGroup 
-                label="Payment Due Date" 
+                label={t('paymentDueDate')} 
                 placeholder="Every 5th" 
                 value={form.dueDate}
                 onChangeText={(val: string) => setForm({ ...form, dueDate: val })}
@@ -138,7 +143,7 @@ export default function AddPropertyScreen() {
               
               <TouchableOpacity style={styles.uploadBtn}>
                 <Ionicons name="cloud-upload-outline" size={24} color={Colors.accent} />
-                <Text style={styles.uploadBtnText}>Upload Lease Agreement (Digital Copy)</Text>
+                <Text style={styles.uploadBtnText}>{t('uploadLease')}</Text>
               </TouchableOpacity>
             </Animated.View>
           )}
@@ -150,14 +155,8 @@ export default function AddPropertyScreen() {
               else router.back();
             }}
           >
-            <Text style={styles.primaryBtnText}>{step === 1 ? "Next Step" : "List Property"}</Text>
+            <Text style={styles.primaryBtnText}>{step === 1 ? t('nextStep') : t('listProperty')}</Text>
           </TouchableOpacity>
-
-          {step === 2 && (
-            <TouchableOpacity style={styles.backBtn} onPress={() => setStep(1)}>
-              <Text style={styles.backBtnText}>Back to Property Details</Text>
-            </TouchableOpacity>
-          )}
 
           <View style={{ height: 100 }} />
         </ScrollView>

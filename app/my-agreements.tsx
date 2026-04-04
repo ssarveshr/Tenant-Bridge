@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -7,23 +7,80 @@ import {
   TouchableOpacity,
   SafeAreaView,
   StatusBar,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { Colors, Spacing, Radius } from "../constants/Theme";
 import Animated, { FadeInUp } from "react-native-reanimated";
+import { useLanguage } from "../hooks/useLanguage";
+import { translateText } from "../services/aiService";
 
 export default function MyAgreementsScreen() {
   const router = useRouter();
+  const { t, language } = useLanguage();
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [translatedClauses, setTranslatedClauses] = useState<any>(null);
+
+  const clauses = [
+    {
+      number: "1.1",
+      title: "Rent & Duration",
+      content: "Monthly rent of ₹25,000 to be paid on or before the 5th of every month. The lease duration is 12 months."
+    },
+    {
+      number: "2.3",
+      title: "Maintenance",
+      content: "Structural repairs exceeding ₹5000 shall be the owner's responsibility. Tenant handles minor repairs."
+    },
+    {
+      number: "4.5",
+      title: "Termination",
+      content: "Two months' notice required by either party for termination of the lease before the expiry date."
+    }
+  ];
+
+  const handleTranslate = async () => {
+    if (language === 'en') {
+      Alert.alert("Already in English", "The agreement is already in your preferred language.");
+      return;
+    }
+
+    setIsTranslating(true);
+    try {
+      const translated = await Promise.all(clauses.map(async (clause) => {
+        const translatedContent = await translateText(clause.content, language);
+        const translatedTitle = await translateText(clause.title, language);
+        return { ...clause, title: translatedTitle, content: translatedContent };
+      }));
+      setTranslatedClauses(translated);
+    } catch (error) {
+      console.error(error);
+      Alert.alert("Translation Failed", "Could not translate at this moment.");
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
+  const activeClauses = translatedClauses || clauses;
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
       
       <View style={styles.header}>
-        <View style={{ width: 24 }} />
-        <Text style={styles.headerTitle}>Digital Agreements</Text>
-        <View style={{ width: 24 }} />
+        <TouchableOpacity onPress={() => router.back()}>
+          <Ionicons name="chevron-back" size={24} color={Colors.textPrimary} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>{t('myAgreements')}</Text>
+        <TouchableOpacity onPress={handleTranslate} disabled={isTranslating}>
+          {isTranslating ? (
+            <ActivityIndicator size="small" color={Colors.accent} />
+          ) : (
+            <Ionicons name="language" size={22} color={Colors.accent} />
+          )}
+        </TouchableOpacity>
       </View>
 
       <ScrollView 
@@ -49,25 +106,32 @@ export default function MyAgreementsScreen() {
           </View>
         </Animated.View>
 
-        <Text style={styles.sectionTitle}>Detailed Clauses</Text>
-        <ClauseItem 
-          number="1.1" 
-          title="Rent & Duration" 
-          content="Monthly rent of ₹25,000 to be paid on or before the 5th of every month. The lease duration is 12 months." 
-        />
-        <ClauseItem 
-          number="2.3" 
-          title="Maintenance" 
-          content="Structural repairs exceeding ₹5000 shall be the owner's responsibility. Tenant handles minor repairs." 
-        />
-        <ClauseItem 
-          number="4.5" 
-          title="Termination" 
-          content="Two months' notice required by either party for termination of the lease before the expiry date." 
-        />
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>{t('clauses')}</Text>
+          {translatedClauses && (
+             <View style={styles.aiBadge}>
+               <Ionicons name="sparkles" size={12} color={Colors.white} />
+               <Text style={styles.aiBadgeText}>AI Translated</Text>
+             </View>
+          )}
+        </View>
+
+        {activeClauses.map((clause: any, index: number) => (
+          <ClauseItem 
+            key={index}
+            number={clause.number} 
+            title={clause.title} 
+            content={clause.content} 
+          />
+        ))}
+
+        <TouchableOpacity style={styles.uploadBtn}>
+          <Ionicons name="cloud-upload-outline" size={20} color={Colors.white} />
+          <Text style={styles.uploadBtnText}>{t('uploadAgreement')}</Text>
+        </TouchableOpacity>
 
         <TouchableOpacity style={styles.downloadBtn}>
-          <Ionicons name="download-outline" size={20} color={Colors.white} />
+          <Ionicons name="download-outline" size={20} color={Colors.textPrimary} />
           <Text style={styles.downloadBtnText}>Download PDF Copy</Text>
         </TouchableOpacity>
 
@@ -198,11 +262,30 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingBottom: 20,
   },
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: Spacing.l,
+  },
   sectionTitle: {
     fontSize: 18,
     fontWeight: "800",
     color: Colors.textPrimary,
-    marginBottom: Spacing.l,
+  },
+  aiBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: Colors.accent,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
+  },
+  aiBadgeText: {
+    fontSize: 10,
+    color: Colors.white,
+    fontWeight: "700",
   },
   clauseItem: {
     backgroundColor: Colors.white,
@@ -238,17 +321,39 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     fontWeight: "500",
   },
-  downloadBtn: {
-    backgroundColor: Colors.textPrimary,
+  uploadBtn: {
+    backgroundColor: Colors.accent,
     height: 60,
     borderRadius: Radius.m,
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
     marginTop: Spacing.xl,
+    shadowColor: Colors.accent,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  uploadBtnText: {
+    color: Colors.white,
+    fontSize: 16,
+    fontWeight: "bold",
+    marginLeft: 12,
+  },
+  downloadBtn: {
+    backgroundColor: Colors.white,
+    height: 60,
+    borderRadius: Radius.m,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: Spacing.m,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   downloadBtnText: {
-    color: Colors.white,
+    color: Colors.textPrimary,
     fontSize: 16,
     fontWeight: "bold",
     marginLeft: 12,

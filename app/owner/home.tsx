@@ -12,14 +12,16 @@ import {
 } from "react-native";
 import Animated, { FadeInRight, FadeInUp } from "react-native-reanimated";
 import { Colors, Radius, Spacing } from "../../constants/Theme";
+import { useLanguage } from "../../hooks/useLanguage";
 
 export default function OwnerHomeScreen() {
   const router = useRouter();
+  const { t, n } = useLanguage();
 
   const notifications = [
     {
       id: "2",
-      title: "New Dispute Raised",
+      title: t('requiresAttention'),
       desc: "Tenant Sarah filed a dispute for 'Sunshine Apt'",
       icon: "alert-circle-outline",
       btnText: "Resolve",
@@ -35,7 +37,7 @@ export default function OwnerHomeScreen() {
       {/* Header with Portfolio Selector */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.portfolioLabel}>Portfolio Overview</Text>
+          <Text style={styles.portfolioLabel}>{t('portfolioOverview')}</Text>
           <View style={styles.portfolioSelector}>
             <Text style={styles.portfolioName}>My Real Estate</Text>
             <Ionicons name="chevron-down" size={16} color={Colors.textPrimary} style={{ marginLeft: 6 }} />
@@ -58,12 +60,12 @@ export default function OwnerHomeScreen() {
           style={styles.collectionCard}
         >
           <View style={styles.collectionInfo}>
-            <Text style={styles.collectionLabel}>Rent Collection • March</Text>
-            <Text style={styles.collectionValue}>₹48,500 / ₹50,000</Text>
+            <Text style={styles.collectionLabel}>{t('rentCollection')} • March</Text>
+            <Text style={styles.collectionValue}>₹{n('48,500')} / ₹{n('50,000')}</Text>
             <View style={styles.progressBarContainer}>
               <View style={[styles.progressBar, { width: "97%" }]} />
             </View>
-            <Text style={styles.progressDetail}>97% Collected • 1 Pending</Text>
+            <Text style={styles.progressDetail}>{n(97)}% {t('collected')} • {n(1)} {t('pending')}</Text>
           </View>
           <TouchableOpacity 
             style={styles.detailsBtn}
@@ -74,7 +76,7 @@ export default function OwnerHomeScreen() {
         </Animated.View>
 
         {/* Action Needed Section */}
-        <Text style={styles.sectionTitle}>Requires Attention</Text>
+        <Text style={styles.sectionTitle}>{t('requiresAttention')}</Text>
         <View style={styles.notificationList}>
           {notifications.map((notif, index) => (
             <Animated.View
@@ -105,7 +107,7 @@ export default function OwnerHomeScreen() {
                 ]}
                 onPress={() => router.push(notif.route as any)}
               >
-                <Text style={styles.verifyBtnText}>{notif.btnText}</Text>
+                <Text style={styles.verifyBtnText}>{t('resolve')}</Text>
               </TouchableOpacity>
             </Animated.View>
           ))}
@@ -113,9 +115,9 @@ export default function OwnerHomeScreen() {
 
         {/* Properties Section */}
         <View style={styles.propertiesHeader}>
-          <Text style={styles.sectionTitle}>My Properties</Text>
+          <Text style={styles.sectionTitle}>{t('myProperties')}</Text>
           <TouchableOpacity>
-            <Text style={styles.manageBtn}>Manage All</Text>
+            <Text style={styles.manageBtn}>{t('manageAll')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -124,32 +126,34 @@ export default function OwnerHomeScreen() {
             name="Sunshine Apartments"
             unit="Flat 402"
             tenant="John Doe"
-            status="Received"
+            status={t('received')}
             statusColor={Colors.success}
             delay={300}
+            t={t}
           />
           <PropertyMiniCard
             name="Green Valley Flats"
             unit="Villa 9"
             tenant="Sarah Smith"
-            status="Overdue"
+            status={t('overdue')}
             statusColor={Colors.danger}
             delay={400}
+            t={t}
           />
         </View>
 
         {/* Portfolio Stats & Reputation */}
-        <Text style={styles.sectionTitle}>Portfolio Stats</Text>
+        <Text style={styles.sectionTitle}>{t('portfolioStats')}</Text>
         <View style={styles.statsGrid}>
-          <StatCard label="Active Leases" value="2" icon="documents-outline" delay={500} />
+          <StatCard label={t('activeLeases')} value={n(2)} icon="documents-outline" delay={500} />
           <TouchableOpacity
             style={{ flex: 1 }}
             onPress={() => router.push("/credit-score" as any)}
             activeOpacity={0.8}
           >
             <StatCard
-              label="Owner Score"
-              value="100/100"
+              label={t('ownerScore')}
+              value={n('100/100')}
               icon="star-outline"
               delay={600}
               color={Colors.accent}
@@ -172,7 +176,7 @@ export default function OwnerHomeScreen() {
   );
 }
 
-function PropertyMiniCard({ name, unit, tenant, status, statusColor, delay }: any) {
+function PropertyMiniCard({ name, unit, tenant, status, statusColor, delay, t }: any) {
   const router = useRouter();
   return (
     <Animated.View
@@ -184,12 +188,12 @@ function PropertyMiniCard({ name, unit, tenant, status, statusColor, delay }: an
         <Text style={[styles.pStatus, { color: statusColor }]}>• {unit}</Text>
       </View>
       <Text style={styles.pName}>{name}</Text>
-      <Text style={styles.pTenant}>Tenant: {tenant}</Text>
+      <Text style={styles.pTenant}>{t('tenant')}: {tenant}</Text>
       <TouchableOpacity
         style={styles.pFooter}
         onPress={() => router.push("/owner/manage/(tabs)/home" as any)}
       >
-        <Text style={styles.pLink}>Manage Property</Text>
+        <Text style={styles.pLink}>{t('manageProperty')}</Text>
         <Ionicons name="chevron-forward" size={14} color={Colors.accent} />
       </TouchableOpacity>
     </Animated.View>

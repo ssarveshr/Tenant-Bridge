@@ -69,9 +69,9 @@ export default function TransactionsScreen() {
             index={4}
           />
           <TransactionCard 
-            title="Utility Bill - Electricity"
-            date="Jan 15, 2026"
-            amount="₹3,450"
+            title="House Rent - December 2025"
+            date="Dec 5, 2025"
+            amount="₹25,000"
             method="Razorpay (Online)"
             hash="0xd1e...f34a"
             index={5}

@@ -10,8 +10,11 @@ import {
 import { Ionicons, Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 
+import { useLanguage } from "../../hooks/useLanguage";
+
 export default function ProfileScreen() {
   const router = useRouter();
+  const { t, n } = useLanguage();
 
   const navigateTo = (path: string) => {
     router.push(path as any);
@@ -38,7 +41,7 @@ export default function ProfileScreen() {
             <Text style={styles.userName}>Demo User</Text>
             <Text style={styles.userEmail}>demo@tenantbridge.com</Text>
             <View style={styles.tenantBadge}>
-              <Text style={styles.tenantBadgeText}>🏠 Tenant</Text>
+              <Text style={styles.tenantBadgeText}>🏠 {t('tenantLogo')}</Text>
             </View>
           </View>
         </View>
@@ -46,21 +49,21 @@ export default function ProfileScreen() {
         <View style={styles.contentBody}>
           {/* Personal Information Card */}
           <View style={styles.sectionCard}>
-            <Text style={styles.sectionTitle}>Personal Information</Text>
+            <Text style={styles.sectionTitle}>{t('personalInformation')}</Text>
             
             <InfoItem 
               icon="mail-outline" 
-              label="Email" 
+              label={t('email')} 
               value="demo@tenantbridge.com" 
             />
             <InfoItem 
               icon="call-outline" 
-              label="Phone" 
-              value="+91 98765 43210" 
+              label={t('phone')} 
+              value={n("+91 98765 43210")} 
             />
             <InfoItem 
               icon="home-outline" 
-              label="Property" 
+              label={t('property') || t('agreements')} 
               value="Sunshine Apartments, Flat 402" 
               last
             />
@@ -68,27 +71,30 @@ export default function ProfileScreen() {
 
           {/* Settings Section */}
           <View style={styles.settingsGroup}>
-            <SettingRow icon="settings-outline" label="Account Settings" />
-            <SettingRow icon="notifications-outline" label="Notifications" badge={3} />
-            <SettingRow icon="shield-outline" label="Privacy & Security" />
-            <SettingRow icon="help-circle-outline" label="Help & Support" last />
+            <SettingRow icon="settings-outline" label={t('accountSettings')} />
+            <SettingRow icon="notifications-outline" label={t('notifications') || "Notifications"} badge={n(3)} />
+            <SettingRow icon="shield-outline" label={t('privacySecurity')} />
+            <SettingRow icon="help-circle-outline" label={t('helpSupport')} last />
           </View>
 
           {/* Version Info */}
           <View style={styles.versionContainer}>
-            <Text style={styles.versionText}>TenantBridge v1.0.0</Text>
-            <Text style={styles.copyrightText}>© 2026 TenantBridge. All rights reserved.</Text>
+            <Text style={styles.versionText}>TenantBridge v{n('1.0.0')}</Text>
+            <Text style={styles.copyrightText}>© {n(2026)} TenantBridge. All rights reserved.</Text>
           </View>
 
           {/* Action Buttons */}
-          <TouchableOpacity style={styles.switchBtn}>
+          <TouchableOpacity 
+            style={styles.switchBtn}
+            onPress={() => navigateTo("/owner/home")}
+          >
             <Ionicons name="refresh-outline" size={20} color="#1a56f0" />
-            <Text style={styles.switchBtnText}>Switch to Owner View</Text>
+            <Text style={styles.switchBtnText}>{t('switchToOwner')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
             <Ionicons name="log-out-outline" size={20} color="#ff3b30" />
-            <Text style={styles.logoutText}>Logout</Text>
+            <Text style={styles.logoutText}>{t('logout')}</Text>
           </TouchableOpacity>
 
           {/* Spacer for bottom nav */}
@@ -98,11 +104,11 @@ export default function ProfileScreen() {
 
       {/* Bottom Tab Bar */}
       <View style={styles.tabBar}>
-        <TabItem icon="home-outline" label="Dashboard" onPress={() => navigateTo("/tenant/dashboard")} />
-        <TabItem icon="document-text-outline" label="Agreements" onPress={() => navigateTo("/tenant/agreements")} />
-        <TabItem icon="wallet-outline" label="Payments" onPress={() => navigateTo("/tenant/payments")} />
-        <TabItem icon="alert-circle-outline" label="Disputes" onPress={() => navigateTo("/tenant/disputes")} />
-        <TabItem icon="person" label="Profile" active />
+        <TabItem icon="home-outline" label={t('dashboard')} onPress={() => navigateTo("/tenant/dashboard")} />
+        <TabItem icon="document-text-outline" label={t('agreements')} onPress={() => navigateTo("/tenant/agreements")} />
+        <TabItem icon="wallet-outline" label={t('payments')} onPress={() => navigateTo("/tenant/payments")} />
+        <TabItem icon="alert-circle-outline" label={t('disputes')} onPress={() => navigateTo("/tenant/disputes")} />
+        <TabItem icon="person" label={t('profile')} active />
       </View>
     </View>
   );

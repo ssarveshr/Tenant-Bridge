@@ -4,7 +4,6 @@ import React, { useEffect, useRef, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
-  SafeAreaView,
   StatusBar,
   StyleSheet,
   Text,
@@ -12,11 +11,14 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
 import { Colors, Radius, Spacing } from "../constants/Theme";
+import { useLanguage } from "../hooks/useLanguage";
 
 export default function VerifyOtpScreen() {
   const router = useRouter();
+  const { t } = useLanguage();
   const { phone } = useLocalSearchParams<{ phone: string }>();
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [timer, setTimer] = useState(30);
@@ -64,9 +66,9 @@ export default function VerifyOtpScreen() {
 
         <View style={styles.formArea}>
           <Animated.View entering={FadeInUp.delay(100).duration(500)}>
-            <Text style={styles.title}>Verify OTP</Text>
+            <Text style={styles.title}>{t('verifyOtp')}</Text>
             <Text style={styles.subtitle}>
-              We've sent a code to <Text style={styles.phoneHighlight}>+91 {phone || "9876543210"}</Text>
+              {t('codeSentTo')} <Text style={styles.phoneHighlight}>+91 {phone || "9876543210"}</Text>
             </Text>
           </Animated.View>
 
@@ -94,16 +96,16 @@ export default function VerifyOtpScreen() {
               style={styles.button}
               onPress={handleVerify}
             >
-              <Text style={styles.buttonText}>Verify & Continue</Text>
+              <Text style={styles.buttonText}>{t('verifyContinue')}</Text>
             </TouchableOpacity>
 
             <View style={styles.resendContainer}>
-              <Text style={styles.resendText}>Didn't receive code? </Text>
+              <Text style={styles.resendText}>{t('didntReceiveCode')} </Text>
               {timer > 0 ? (
-                <Text style={styles.timerText}>Resend in {timer}s</Text>
+                <Text style={styles.timerText}>{t('resendIn')} {timer}s</Text>
               ) : (
                 <TouchableOpacity onPress={() => setTimer(30)}>
-                  <Text style={styles.resendLink}>Resend Now</Text>
+                  <Text style={styles.resendLink}>{t('resendNow')}</Text>
                 </TouchableOpacity>
               )}
             </View>

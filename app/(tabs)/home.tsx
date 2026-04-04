@@ -13,9 +13,12 @@ import { Ionicons, Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { Colors, Spacing, Radius } from "../../constants/Theme";
 import Animated, { FadeInUp, FadeInRight } from "react-native-reanimated";
+import { useLanguage } from "../../hooks/useLanguage";
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { t } = useLanguage();
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
@@ -23,7 +26,7 @@ export default function HomeScreen() {
       {/* Header with Avatar and Property Selector */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.propertyLabel}>Property Workspace</Text>
+          <Text style={styles.propertyLabel}>{t('propertyWorkspace')}</Text>
           <View style={styles.propertySelector}>
             <Text style={styles.propertyName}>Sunshine Apartments</Text>
             <Ionicons name="chevron-down" size={16} color={Colors.textPrimary} style={{ marginLeft: 6 }} />
@@ -42,11 +45,11 @@ export default function HomeScreen() {
         >
           <View style={styles.statusRow}>
             <View>
-              <Text style={styles.rentLabel}>Monthly Rent</Text>
+              <Text style={styles.rentLabel}>{t('monthlyRent')}</Text>
               <Text style={styles.rentValue}>₹25,000</Text>
             </View>
             <View style={styles.dueBadge}>
-              <Text style={styles.dueLabel}>Next Due</Text>
+              <Text style={styles.dueLabel}>{t('nextDue')}</Text>
               <Text style={styles.dueDate}>April 5, 2026</Text>
             </View>
           </View>
@@ -56,21 +59,21 @@ export default function HomeScreen() {
         <View style={styles.grid}>
           <DashboardCard 
             icon="receipt-outline" 
-            label="Transactions" 
+            label={t('transactions')} 
             value="3 Paid" 
             delay={200}
             color="#2563EB"
           />
           <DashboardCard 
             icon="alert-circle-outline" 
-            label="Disputes" 
+            label={t('disputes')} 
             value="None Active" 
             delay={300}
             color="#EF4444"
           />
           <DashboardCard 
             icon="document-text-outline" 
-            label="Agreement" 
+            label={t('agreement')} 
             value="Active" 
             delay={400}
             color="#10B981"
@@ -78,7 +81,7 @@ export default function HomeScreen() {
           />
           <DashboardCard 
             icon="star-outline" 
-            label="Trust Score" 
+            label={t('trustScore')} 
             value="100/100" 
             delay={500}
             color="#F59E0B"
@@ -88,9 +91,9 @@ export default function HomeScreen() {
 
         {/* Recent Activity Section */}
         <View style={styles.activityHeader}>
-          <Text style={styles.sectionTitle}>Recent Activity</Text>
+          <Text style={styles.sectionTitle}>{t('recentActivity')}</Text>
           <TouchableOpacity>
-            <Text style={styles.viewAllBtn}>View All</Text>
+            <Text style={styles.viewAllBtn}>{t('viewAll')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -120,7 +123,7 @@ export default function HomeScreen() {
           onPress={() => router.push("/pay-rent" as any)}
         >
           <Ionicons name="wallet-outline" size={24} color={Colors.white} />
-          <Text style={styles.payBtnText}>Pay Rent</Text>
+          <Text style={styles.payBtnText}>{t('payRent')}</Text>
         </TouchableOpacity>
 
         <View style={{ height: 60 }} />

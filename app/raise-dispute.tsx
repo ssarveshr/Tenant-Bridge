@@ -15,9 +15,11 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { Colors, Spacing, Radius } from "../constants/Theme";
 import Animated, { FadeInUp } from "react-native-reanimated";
+import { useLanguage } from "../hooks/useLanguage";
 
 export default function RaiseDisputeScreen() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [category, setCategory] = useState("Maintenance");
 
   return (
@@ -25,8 +27,10 @@ export default function RaiseDisputeScreen() {
       <StatusBar barStyle="dark-content" />
       
       <View style={styles.header}>
-        <View style={{ width: 28 }} />
-        <Text style={styles.headerTitle}>Raise New Dispute</Text>
+        <TouchableOpacity onPress={() => router.back()}>
+          <Ionicons name="chevron-back" size={24} color={Colors.textPrimary} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>{t('raiseDispute')}</Text>
         <View style={{ width: 28 }} />
       </View>
 
@@ -39,7 +43,7 @@ export default function RaiseDisputeScreen() {
           contentContainerStyle={styles.scrollContent}
         >
           <Animated.View entering={FadeInUp.duration(500)}>
-            <Text style={styles.label}>Select Category</Text>
+            <Text style={styles.label}>{t('selectLanguage')}</Text>
             <View style={styles.categoryRow}>
               <CategoryOption 
                 label="Maintenance" 
@@ -88,7 +92,7 @@ export default function RaiseDisputeScreen() {
 
             <TouchableOpacity 
               style={styles.primaryBtn}
-              onPress={() => router.back()}
+              onPress={() => router.push("/dispute-verdict" as any)}
             >
               <Text style={styles.primaryBtnText}>Submit for AI Review</Text>
             </TouchableOpacity>

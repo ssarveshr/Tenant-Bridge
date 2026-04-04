@@ -12,17 +12,21 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { Colors, Spacing, Radius } from "../constants/Theme";
 import Animated, { FadeInUp } from "react-native-reanimated";
+import { useLanguage } from "../hooks/useLanguage";
 
 export default function DisputeVerdictScreen() {
   const router = useRouter();
+  const { t } = useLanguage();
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
       
       <View style={styles.header}>
-        <View style={{ width: 24 }} />
-        <Text style={styles.headerTitle}>AI Resolution Verdict</Text>
+        <TouchableOpacity onPress={() => router.back()}>
+          <Ionicons name="chevron-back" size={24} color={Colors.textPrimary} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>{t('aiResolutionVerdict')}</Text>
         <View style={{ width: 28 }} />
       </View>
 
@@ -39,7 +43,7 @@ export default function DisputeVerdictScreen() {
         <Animated.View entering={FadeInUp.delay(300).duration(500)} style={styles.clauseCard}>
           <View style={styles.clauseHeader}>
             <Ionicons name="document-text" size={20} color={Colors.accent} />
-            <Text style={styles.clauseTitle}>Reference: Clause 7.2</Text>
+            <Text style={styles.clauseTitle}>{t('referenceClause')}</Text>
           </View>
           <Text style={styles.clauseContent}>
             'Minor maintenance issues under ₹1,000 shall be the responsibility of the Tenant. Issues exceeding this amount, or structural leaks, shall be repaired by the Owner.'
@@ -55,13 +59,13 @@ export default function DisputeVerdictScreen() {
         <View style={styles.verdictContainer}>
           <View style={styles.verdictBadge}>
             <Ionicons name="checkmark-circle" size={24} color={Colors.success} />
-            <Text style={styles.verdictTitle}>Final Verdict</Text>
+            <Text style={styles.verdictTitle}>{t('finalVerdict')}</Text>
           </View>
           <Text style={styles.verdictText}>The Owner is responsible for the full repair cost and must initiate repairs within 48 hours.</Text>
         </View>
 
-        <TouchableOpacity style={styles.acceptBtn} onPress={() => router.back()}>
-          <Text style={styles.acceptBtnText}>Acknowledge Verdict</Text>
+        <TouchableOpacity style={styles.acceptBtn} onPress={() => router.replace('/tenant/dashboard')}>
+          <Text style={styles.acceptBtnText}>{t('acknowledgeVerdict')}</Text>
         </TouchableOpacity>
 
         <View style={{ height: 100 }} />
