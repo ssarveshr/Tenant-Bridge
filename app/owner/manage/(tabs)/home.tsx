@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { Colors, Spacing, Radius } from "../../../../constants/Theme";
+import { Colors, Spacing, Radius } from "../../../../constants/theme";
 import Animated, { FadeInUp, FadeInRight } from "react-native-reanimated";
 import { usePropertyStore } from "../../../../store/propertyStore";
 

@@ -17,7 +17,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from "expo-router";
-import { Colors, Spacing, Radius } from "../constants/Theme";
+import { Colors, Spacing, Radius } from "../constants/theme";
 import Animated, { FadeInUp, FadeIn, Layout } from "react-native-reanimated";
 import { useLanguage } from "../hooks/useLanguage";
 import { addDispute, setActiveProcessingId } from "../store/disputeStore";
@@ -56,17 +56,29 @@ export default function RaiseDisputeScreen() {
     // Simulate Network latency
     setTimeout(async () => {
       try {
-        await addDispute({
+        const newDispute = await addDispute({
           title,
           category,
           description,
           property_id: myLease.id,
+          owner_id: myLease.owner_id || '',
+          evidence_urls: evidence.map(e => e.publicUrl),
         });
         
+        // Set context for AI processing
+        setActiveProcessingId(newDispute.id);
+        
         setIsSubmitting(false);
-        Alert.alert("Success", "Dispute submitted for AI Review", [
-          { text: "OK", onPress: () => router.back() }
-        ]);
+        
+        // Navigate to processing screen
+        router.push({
+          pathname: "/ai-processing",
+          params: { 
+            description, 
+            category,
+            title
+          }
+        } as any);
       } catch (err) {
         setIsSubmitting(false);
         Alert.alert("Error", "Failed to submit dispute. Please try again.");

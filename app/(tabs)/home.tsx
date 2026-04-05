@@ -12,12 +12,13 @@ import {
 } from "react-native";
 import { Ionicons, Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { Colors, Spacing, Radius } from "../../constants/Theme";
+import { Colors, Spacing, Radius } from "../../constants/theme";
 import Animated, { FadeInUp, FadeInRight } from "react-native-reanimated";
 import { useLanguage } from "../../hooks/useLanguage";
 import { usePropertyStore } from "../../store/propertyStore";
 import { useTransactionStore } from "../../store/transactionStore";
 import { useDisputeStore } from "../../store/disputeStore";
+import { useReputationStore } from "../../store/reputationStore";
 import { supabase } from "../../lib/supabase";
 
 export default function HomeScreen() {
@@ -26,12 +27,14 @@ export default function HomeScreen() {
   const { properties, fetchProperties, isLoading } = usePropertyStore();
   const { transactions, fetchTransactions } = useTransactionStore();
   const { disputes, fetchDisputes } = useDisputeStore();
+  const { score, fetchReputation } = useReputationStore();
   const myLease = usePropertyStore((state) => state.getMyLease());
 
   React.useEffect(() => {
     fetchProperties('tenant');
     fetchTransactions();
     fetchDisputes();
+    fetchReputation();
   }, []);
 
   if (isLoading) {
@@ -136,7 +139,7 @@ export default function HomeScreen() {
           <DashboardCard 
             icon="star-outline" 
             label={t('trustScore')} 
-            value={`${transactions.filter(tx => tx.status === 'Success').length > 0 ? '98' : '100'}/100`} 
+            value={`${score}/100`} 
             delay={500}
             color="#F59E0B"
             onPress={() => router.push("/credit-score" as any)}

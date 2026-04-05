@@ -11,7 +11,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { Colors, Spacing, Radius } from "../constants/Theme";
+import { Colors, Spacing, Radius } from "../constants/theme";
 import { usePropertyStore } from "../store/propertyStore";
 import { useTransactionStore } from "../store/transactionStore";
 import RazorpayCheckout from "react-native-razorpay";

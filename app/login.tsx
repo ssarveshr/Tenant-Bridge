@@ -21,7 +21,7 @@ import Animated, {
   useSharedValue,
   withTiming
 } from "react-native-reanimated";
-import { Colors, Radius, Spacing } from "../constants/Theme";
+import { Colors, Radius, Spacing } from "../constants/theme";
 import { useLanguage } from "../hooks/useLanguage";
 import { supabase } from "../lib/supabase";
 

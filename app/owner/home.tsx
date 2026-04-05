@@ -11,7 +11,7 @@ import {
   View,
 } from "react-native";
 import Animated, { FadeInRight, FadeInUp } from "react-native-reanimated";
-import { Colors, Radius, Spacing } from "../../constants/Theme";
+import { Colors, Radius, Spacing } from "../../constants/theme";
 import { useLanguage } from "../../hooks/useLanguage";
 import { usePropertyStore } from "../../store/propertyStore";
 import { useTransactionStore } from "../../store/transactionStore";
@@ -79,9 +79,12 @@ export default function OwnerHomeScreen() {
             <Ionicons name="chevron-down" size={16} color={Colors.textPrimary} style={{ marginLeft: 6 }} />
           </View>
         </View>
-        <TouchableOpacity activeOpacity={0.8}>
+        <TouchableOpacity 
+          activeOpacity={0.8}
+          onPress={() => router.push("/owner/(tabs)/profile")}
+        >
           <View style={styles.avatar}>
-            <Ionicons name="business" size={24} color={Colors.accent} />
+            <Ionicons name="person" size={24} color={Colors.accent} />
           </View>
         </TouchableOpacity>
       </View>

@@ -14,7 +14,7 @@ import {
   Alert,
 } from "react-native";
 import Animated, { FadeInUp } from "react-native-reanimated";
-import { Colors, Radius, Spacing } from "../../constants/Theme";
+import { Colors, Radius, Spacing } from "../../constants/theme";
 
 export default function RentDashboardScreen() {
   const { t, n } = useLanguage();

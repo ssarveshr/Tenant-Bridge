@@ -15,7 +15,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { Colors, Spacing, Radius } from "../constants/Theme";
+import { Colors, Spacing, Radius } from "../constants/theme";
 import Animated, { FadeInUp } from "react-native-reanimated";
 import { useLanguage } from "../hooks/useLanguage";
 import { chatWithGemini } from "../services/aiService";

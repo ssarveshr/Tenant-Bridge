@@ -11,34 +11,65 @@ import {
   View,
 } from "react-native";
 import Animated, { FadeInRight, FadeInUp } from "react-native-reanimated";
-import { Colors, Radius, Spacing } from "../../../constants/Theme";
+import { Colors, Radius, Spacing } from "../../../constants/theme";
 import { useLanguage } from "../../../hooks/useLanguage";
 import { usePropertyStore } from "../../../store/propertyStore";
+import { useDisputeStore } from "../../../store/disputeStore";
+import { supabase } from "../../../lib/supabase";
 
 export default function OwnerHomeScreen() {
   const router = useRouter();
   const { t, n } = useLanguage();
-  const properties = usePropertyStore((state) => state.properties);
+  const { properties, fetchProperties } = usePropertyStore();
+  const { disputes, fetchDisputes } = useDisputeStore();
+  const [userName, setUserName] = React.useState("Owner");
+
+  React.useEffect(() => {
+    fetchProperties('owner');
+    fetchDisputes();
+
+    // Fetch user name
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) {
+        setUserName(data.user.user_metadata?.full_name || "Owner");
+      }
+    });
+  }, []);
 
   // Dynamic Stats Calculation
-  const totalRent = properties.reduce((acc, p) => acc + (parseInt(p.rent) || 0), 0);
+  const parseAmount = (val: string) => parseInt(val?.toString().replace(/[^0-9]/g, '')) || 0;
+  
+  const totalRent = properties.reduce((acc, p) => acc + parseAmount(p.rent), 0);
   const collectedRent = properties
     .filter(p => p.status === 'Received')
-    .reduce((acc, p) => acc + (parseInt(p.rent) || 0), 0);
+    .reduce((acc, p) => acc + parseAmount(p.rent), 0);
   
   const collectionRate = totalRent > 0 ? (collectedRent / totalRent) * 100 : 0;
   const pendingCount = properties.filter(p => p.status !== 'Received').length;
 
   const notifications = [
-    {
-      id: "2",
-      title: t('requiresAttention'),
-      desc: "Tenant Sarah filed a dispute for 'Sunshine Apt'",
-      icon: "alert-circle-outline",
-      btnText: "Resolve",
-      type: "dispute",
-      route: "/dispute-verdict",
-    }
+    ...disputes
+      .filter(d => d.status === 'Pending' && !d.owner_ack)
+      .map(d => ({
+        id: d.id,
+        title: "Dispute Filed",
+        desc: d.title,
+        icon: "alert-circle-outline",
+        btnText: t('resolve'),
+        type: "dispute",
+        route: { pathname: "/owner/dispute-review", params: { id: d.id } },
+      })),
+    ...properties
+      .filter(p => p.status === 'Overdue')
+      .map(p => ({
+        id: `rent-${p.id}`,
+        title: "Rent Overdue",
+        desc: `${p.name} - ${p.unit}`,
+        icon: "calendar-outline",
+        btnText: "Track",
+        type: "rent",
+        route: "/owner/rent-dashboard",
+      }))
   ];
 
   return (
@@ -50,13 +81,16 @@ export default function OwnerHomeScreen() {
         <View>
           <Text style={styles.portfolioLabel}>{t('portfolioOverview')}</Text>
           <View style={styles.portfolioSelector}>
-            <Text style={styles.portfolioName}>My Real Estate</Text>
+            <Text style={styles.portfolioName}>{userName}'s Portfolio</Text>
             <Ionicons name="chevron-down" size={16} color={Colors.textPrimary} style={{ marginLeft: 6 }} />
           </View>
         </View>
-        <TouchableOpacity activeOpacity={0.8}>
+        <TouchableOpacity 
+          activeOpacity={0.8}
+          onPress={() => router.push("/owner/(tabs)/profile")}
+        >
           <View style={styles.avatar}>
-            <Ionicons name="business" size={24} color={Colors.accent} />
+            <Ionicons name="person" size={24} color={Colors.accent} />
           </View>
         </TouchableOpacity>
       </View>
@@ -89,39 +123,48 @@ export default function OwnerHomeScreen() {
         {/* Action Needed Section */}
         <Text style={styles.sectionTitle}>{t('requiresAttention')}</Text>
         <View style={styles.notificationList}>
-          {notifications.map((notif, index) => (
-            <Animated.View
-              key={notif.id}
-              entering={FadeInUp.delay(200 + index * 100).duration(500)}
-              style={styles.attentionCard}
-            >
-              <View style={styles.attentionLeft}>
-                <View style={[
-                  styles.attentionIconCircle, 
-                  { backgroundColor: notif.type === 'dispute' ? '#FEF2F2' : '#FFF7ED' }
-                ]}>
-                  <Ionicons 
-                    name={notif.icon as any} 
-                    size={24} 
-                    color={notif.type === 'dispute' ? Colors.danger : Colors.warning} 
-                  />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.attentionTitle}>{notif.title}</Text>
-                  <Text style={styles.attentionDesc} numberOfLines={1}>{notif.desc}</Text>
-                </View>
-              </View>
-              <TouchableOpacity
-                style={[
-                  styles.verifyBtn, 
-                  notif.type === 'dispute' && { backgroundColor: Colors.danger }
-                ]}
-                onPress={() => router.push(notif.route as any)}
+          {notifications.length > 0 ? (
+            notifications.map((notif, index) => (
+              <Animated.View
+                key={notif.id}
+                entering={FadeInUp.delay(200 + index * 100).duration(500)}
+                style={styles.attentionCard}
               >
-                <Text style={styles.verifyBtnText}>{t('resolve')}</Text>
-              </TouchableOpacity>
-            </Animated.View>
-          ))}
+                <View style={styles.attentionLeft}>
+                  <View style={[
+                    styles.attentionIconCircle, 
+                    { backgroundColor: notif.type === 'dispute' ? '#FEF2F2' : '#FFF7ED' }
+                  ]}>
+                    <Ionicons 
+                      name={notif.icon as any} 
+                      size={24} 
+                      color={notif.type === 'dispute' ? Colors.danger : Colors.warning} 
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.attentionTitle}>{notif.title}</Text>
+                    <Text style={styles.attentionDesc} numberOfLines={1}>{notif.desc}</Text>
+                  </View>
+                </View>
+                <TouchableOpacity
+                  style={[
+                    styles.verifyBtn, 
+                    notif.type === 'dispute' && { backgroundColor: Colors.danger }
+                  ]}
+                  onPress={() => router.push(notif.route as any)}
+                >
+                  <Text style={styles.verifyBtnText}>{notif.btnText}</Text>
+                </TouchableOpacity>
+              </Animated.View>
+            ))
+          ) : (
+            <View style={styles.emptyAttention}>
+              <View style={styles.checkCircle}>
+                <Ionicons name="checkmark-done-circle" size={28} color={Colors.success} />
+              </View>
+              <Text style={styles.emptyAttentionText}>Relax! No actions required right now.</Text>
+            </View>
+          )}
         </View>
 
         {/* Properties Section */}
@@ -482,5 +525,24 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 15,
     elevation: 8,
+  },
+  emptyAttention: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: Colors.white,
+    padding: Spacing.m,
+    borderRadius: Radius.m,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderStyle: "dashed",
+  },
+  checkCircle: {
+    marginRight: 12,
+  },
+  emptyAttentionText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: Colors.textSecondary,
+    fontStyle: "italic",
   },
 });

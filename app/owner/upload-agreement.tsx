@@ -14,7 +14,7 @@ import {
   View,
 } from "react-native";
 import Animated, { FadeIn, FadeInUp } from "react-native-reanimated";
-import { Colors, Radius, Spacing } from "../../constants/Theme";
+import { Colors, Radius, Spacing } from "../../constants/theme";
 import { analyzeLeaseAgreement } from "../../services/aiService";
 
 export default function UploadAgreementScreen() {

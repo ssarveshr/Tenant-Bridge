@@ -1,21 +1,23 @@
-import React from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  SafeAreaView,
-  StatusBar,
-  Linking,
-} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { Colors, Spacing, Radius } from "../constants/Theme";
+import React from "react";
+import {
+  Linking,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import Animated, { FadeInUp } from "react-native-reanimated";
+import { Colors, Radius, Spacing } from "../constants/theme";
 import { useLanguage } from "../hooks/useLanguage";
+import { Image } from "react-native";
 import { getGlobalVerdict } from "../services/aiService";
-import { getActiveProcessingId, updateDisputeStatus } from "../store/disputeStore";
+import { acknowledgeDispute, rejectDispute, getActiveProcessingId, useDisputeStore } from "../store/disputeStore";
+import { addReputationEvent } from "../store/reputationStore";
 
 export default function DisputeVerdictScreen() {
   const router = useRouter();
@@ -23,35 +25,45 @@ export default function DisputeVerdictScreen() {
   const activeId = getActiveProcessingId();
   const { t } = useLanguage();
 
-  const handleAcknowledge = () => {
+  const { disputes } = useDisputeStore();
+  const currentDispute = disputes.find(d => d.id === activeId);
+
+  const handleAccept = async () => {
     if (activeId) {
-      updateDisputeStatus(activeId, 'Resolved', rawVerdict || undefined);
+      await acknowledgeDispute(activeId, 'tenant');
     }
     router.push("/(tabs)/disputes" as any);
   };
 
-  const handleEscalate = () => {
-    if (activeId) {
-      updateDisputeStatus(activeId, 'Escalated', rawVerdict || undefined);
+  const handleReject = async () => {
+    if (activeId && currentDispute) {
+      await rejectDispute(activeId, 'tenant');
+      router.push("/(tabs)/disputes" as any);
     }
-    Linking.openURL('mailto:legal@tenantbridge.com?subject=Need Legal Assistance with Dispute');
-    router.push("/(tabs)/disputes" as any);
   };
 
   let parsedVerdict = null;
   let isError = false;
 
-  if (rawVerdict) {
-    if (rawVerdict.startsWith("Analysis failed:")) {
+  // Prioritize saved verdict from the dispute object for historical accuracy
+  const finalVerdictSource = currentDispute?.verdict || rawVerdict;
+
+  if (finalVerdictSource) {
+    if (finalVerdictSource.startsWith("Analysis failed:")) {
       isError = true;
     } else {
       try {
-        parsedVerdict = JSON.parse(rawVerdict);
+        parsedVerdict = JSON.parse(finalVerdictSource);
       } catch (e) {
-        console.warn("Failed to parse verdict JSON:", e);
+        // If not JSON, use as plain text
+        parsedVerdict = { finalVerdict: finalVerdictSource, reasoning: "AI Reasoning recorded.", clauseReference: "General Terms" };
       }
     }
   }
+
+  const isResolved = currentDispute?.status === 'Resolved';
+  const isEscalated = currentDispute?.status === 'Escalated';
+  const hasTenantAck = currentDispute?.tenant_ack;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -61,7 +73,7 @@ export default function DisputeVerdictScreen() {
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={24} color={Colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t('aiResolutionVerdict')}</Text>
+        <Text style={styles.headerTitle}>{isResolved ? "Resolved Resolution" : (isEscalated ? "Escalated Dispute" : t('aiResolutionVerdict'))}</Text>
         <View style={{ width: 28 }} />
       </View>
 
@@ -71,17 +83,17 @@ export default function DisputeVerdictScreen() {
       >
         <ChatBubble 
           role="ai" 
-          message="Based on the uploaded evidence and the details provided, here is my resolution." 
+          message={isResolved ? "This dispute has been fully resolved and archived." : (isEscalated ? "This dispute has been escalated. Mediation may be required." : "Based on the uploaded evidence and the details provided, here is my resolution.")} 
           delay={100}
         />
 
-        {isError && rawVerdict ? (
+        {isError && finalVerdictSource ? (
           <View style={[styles.verdictContainer, { borderColor: "#DC2626" }]}>
             <View style={styles.verdictBadge}>
               <Ionicons name="close-circle" size={24} color="#DC2626" />
               <Text style={[styles.verdictTitle, { color: "#DC2626" }]}>Analysis Error</Text>
             </View>
-            <Text style={styles.verdictText}>{rawVerdict}</Text>
+            <Text style={styles.verdictText}>{finalVerdictSource}</Text>
           </View>
         ) : parsedVerdict ? (
           <>
@@ -101,21 +113,59 @@ export default function DisputeVerdictScreen() {
               delay={500}
             />
 
-            <View style={styles.verdictContainer}>
+            {/* Evidence Section */}
+            {currentDispute?.evidence_urls && currentDispute.evidence_urls.length > 0 && (
+              <View style={styles.evidenceSection}>
+                <Text style={styles.evidenceTitle}>Your Submitted Evidence</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.evidenceScroll}>
+                  {currentDispute.evidence_urls.map((url, idx) => (
+                    <View key={idx} style={styles.evidenceCard}>
+                      {url.toLowerCase().endsWith('.pdf') ? (
+                        <View style={styles.pdfPlaceholder}>
+                          <Ionicons name="document-text" size={32} color={Colors.accent} />
+                          <Text style={styles.pdfText}>PDF</Text>
+                        </View>
+                      ) : (
+                        <Image source={{ uri: url }} style={styles.evidenceImage} />
+                      )}
+                    </View>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+
+            <View style={[styles.verdictContainer, isResolved && { borderColor: Colors.success, shadowColor: Colors.success }, isEscalated && { borderColor: Colors.danger }]}>
               <View style={styles.verdictBadge}>
-                <Ionicons name="checkmark-circle" size={24} color={Colors.success} />
-                <Text style={styles.verdictTitle}>{t('finalVerdict')}</Text>
+                <Ionicons name="checkmark-circle" size={24} color={isEscalated ? Colors.danger : Colors.success} />
+                <Text style={[styles.verdictTitle, { color: isEscalated ? Colors.danger : Colors.success }]}>{isResolved ? "Final Resolution" : (isEscalated ? "Contested Verdict" : t('finalVerdict'))}</Text>
               </View>
               <Text style={styles.verdictText}>{parsedVerdict.finalVerdict}</Text>
+              
+              {isResolved ? (
+                <View style={[styles.waitBadge, { backgroundColor: `${Colors.success}10`, borderColor: `${Colors.success}30` }]}>
+                  <Ionicons name="ribbon-outline" size={16} color={Colors.success} />
+                  <Text style={[styles.waitText, { color: Colors.success }]}>Consensus Reached & Closed</Text>
+                </View>
+              ) : isEscalated ? (
+                <View style={[styles.waitBadge, { backgroundColor: `${Colors.danger}10`, borderColor: `${Colors.danger}30` }]}>
+                  <Ionicons name="warning-outline" size={16} color={Colors.danger} />
+                  <Text style={[styles.waitText, { color: Colors.danger }]}>Verdict Rejected - Reputation Impacted</Text>
+                </View>
+              ) : hasTenantAck && !currentDispute?.owner_ack && (
+                <View style={styles.waitBadge}>
+                  <Ionicons name="time-outline" size={16} color={Colors.warning} />
+                  <Text style={styles.waitText}>Waiting for Owner Acceptance</Text>
+                </View>
+              )}
             </View>
           </>
-        ) : rawVerdict ? (
+        ) : finalVerdictSource ? (
           <View style={styles.verdictContainer}>
             <View style={styles.verdictBadge}>
               <Ionicons name="checkmark-circle" size={24} color={Colors.success} />
               <Text style={styles.verdictTitle}>{t('finalVerdict')}</Text>
             </View>
-            <Text style={styles.verdictText}>{rawVerdict as string}</Text>
+            <Text style={styles.verdictText}>{finalVerdictSource as string}</Text>
           </View>
         ) : (
           <View style={styles.verdictContainer}>
@@ -123,19 +173,21 @@ export default function DisputeVerdictScreen() {
           </View>
         )}
 
-        <View style={styles.actionRow}>
-          <TouchableOpacity style={[styles.acceptBtn, { flex: 1 }]} onPress={handleAcknowledge}>
-            <Text style={styles.acceptBtnText}>{t('acknowledgeVerdict')}</Text>
-          </TouchableOpacity>
+        {!isResolved && !isEscalated && !hasTenantAck && (
+          <View style={styles.actionRow}>
+            <TouchableOpacity style={[styles.acceptBtn, { flex: 1, backgroundColor: Colors.success }]} onPress={handleAccept}>
+              <Text style={styles.acceptBtnText}>Accept AI Verdict</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={styles.escalateBtn} 
-            onPress={handleEscalate}
-          >
-            <Ionicons name="warning" size={24} color={Colors.white} />
-            <Text style={styles.escalateBtnText}>Contact Legal{"\n"}Consultant</Text>
-          </TouchableOpacity>
-        </View>
+            <TouchableOpacity 
+              style={[styles.escalateBtn, { backgroundColor: Colors.danger, borderColor: Colors.danger }]} 
+              onPress={handleReject}
+            >
+              <Ionicons name="close-circle" size={24} color={Colors.white} />
+              <Text style={styles.escalateBtnText}>Reject Verdict</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         <View style={{ height: 100 }} />
       </ScrollView>
@@ -145,7 +197,7 @@ export default function DisputeVerdictScreen() {
 
 function ChatBubble({ role, message, delay }: any) {
   return (
-    <Animated.View 
+    <Animated.View
       entering={FadeInUp.delay(delay).duration(500)}
       style={[styles.bubble, role === "ai" ? styles.aiBubble : styles.userBubble]}
     >
@@ -220,7 +272,7 @@ const styles = StyleSheet.create({
   },
   clauseTitle: {
     fontSize: 13,
-    fontWeight: "800",
+    fontWeight: "700",
     color: Colors.accent,
     marginLeft: 8,
     textTransform: "uppercase",
@@ -263,6 +315,22 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     lineHeight: 24,
   },
+  waitBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: `${Colors.warning}10`,
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: `${Colors.warning}30`,
+  },
+  waitText: {
+    fontSize: 13,
+    color: Colors.warning,
+    fontWeight: "700",
+    marginLeft: 8,
+  },
   acceptBtn: {
     backgroundColor: Colors.textPrimary,
     height: 60,
@@ -295,4 +363,50 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     textAlign: "center",
   },
+  disabledBtn: {
+    opacity: 0.5,
+  },
+  evidenceSection: {
+    marginBottom: 20,
+    backgroundColor: Colors.white,
+    padding: Spacing.m,
+    borderRadius: Radius.m,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  evidenceTitle: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: Colors.textSecondary,
+    textTransform: "uppercase",
+    marginBottom: 10,
+  },
+  evidenceScroll: {
+    gap: 10,
+  },
+  evidenceCard: {
+    width: 100,
+    height: 100,
+    borderRadius: Radius.s,
+    backgroundColor: "#F8F9FB",
+    borderWidth: 1,
+    borderColor: Colors.border,
+    overflow: "hidden",
+  },
+  evidenceImage: {
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover",
+  },
+  pdfPlaceholder: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  pdfText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: Colors.accent,
+    marginTop: 4,
+  }
 });

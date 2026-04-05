@@ -14,9 +14,10 @@ import {
   KeyboardAvoidingView,
   Platform
 } from "react-native";
+import * as LocalAuthentication from "expo-local-authentication";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { Colors, Radius, Spacing } from "../constants/Theme";
+import { Colors, Radius, Spacing } from "../constants/theme";
 import Animated, { FadeIn, FadeInUp } from "react-native-reanimated";
 import { useLanguage } from "../hooks/useLanguage";
 import { usePropertyStore } from "../store/propertyStore";
@@ -30,7 +31,7 @@ export default function ReviewAgreementScreen() {
   const acknowledgeLease = usePropertyStore((state) => state.acknowledgeLease);
   const requestRevision = usePropertyStore((state) => state.requestRevision);
   const linkTenant = usePropertyStore((state) => state.linkTenant);
-  
+
   const property = getPropertyById(id as string);
   const [isTranslating, setIsTranslating] = useState(false);
   const [translatedAddons, setTranslatedAddons] = useState<string[]>([]);
@@ -42,7 +43,7 @@ export default function ReviewAgreementScreen() {
     if (property) {
       // Initially link the tenant as 'Reviewing'
       linkTenant(property.id, "John Doe"); // John Doe is our default simulated tenant
-      
+
       if (language !== 'en') {
         translateAgreement();
       } else {
@@ -58,10 +59,10 @@ export default function ReviewAgreementScreen() {
     try {
       const addons = property.agreementAddons || [];
       const custom = property.customPoints || [];
-      
+
       const tAddons = await Promise.all(addons.map(a => translateText(a.replace('_', ' '), language)));
       const tCustom = await Promise.all(custom.map(c => translateText(c, language)));
-      
+
       setTranslatedAddons(tAddons);
       setTranslatedCustomPoints(tCustom);
     } catch (e) {
@@ -71,17 +72,41 @@ export default function ReviewAgreementScreen() {
     }
   };
 
-  const handleAcknowledge = () => {
+  const handleAcknowledge = async () => {
+    // Check for biometric support
+    const hasHardware = await LocalAuthentication.hasHardwareAsync();
+    const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+
+    if (!hasHardware || !isEnrolled) {
+      // Fallback to simple alert if no biometric hardware or none enrolled
+      proceedToSign("Device PIN/Passcode");
+      return;
+    }
+
+    const result = await LocalAuthentication.authenticateAsync({
+      promptMessage: "Authenticate to Sign Lease",
+      fallbackLabel: "Use Passcode",
+      disableDeviceFallback: false,
+    });
+
+    if (result.success) {
+      proceedToSign("Biometric/Passcode Verified");
+    } else {
+      Alert.alert("Authentication Failed", "Signature could not be verified. Please try again.");
+    }
+  };
+
+  const proceedToSign = (method: string) => {
     Alert.alert(
       "Confirm Acknowledgement",
-      "By acknowledging, you agree to all terms and conditions of this digital lease. This will be recorded on the blockchain.",
+      `By signing with ${method}, you legally bind yourself to this digital lease. This transaction will be recorded on the blockchain.`,
       [
         { text: "Cancel", style: "cancel" },
         { 
-          text: "Acknowledge & Sign", 
+          text: "Sign Agreement", 
           onPress: () => {
             acknowledgeLease(property!.id);
-            Alert.alert("Success", "Agreement acknowledged! You are now linked to this property.");
+            Alert.alert("Success", "Agreement signed and recorded! You are now legally linked to this property.");
             router.replace("/(tabs)/home" as any);
           } 
         }
@@ -102,7 +127,7 @@ export default function ReviewAgreementScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
-      
+
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="close" size={24} color={Colors.textPrimary} />
@@ -139,7 +164,7 @@ export default function ReviewAgreementScreen() {
             ) : (
               <View style={styles.docArea}>
                 <Text style={styles.docTitle}>{language === 'en' ? 'Core Clauses' : t('clauses')}</Text>
-                
+
                 <View style={styles.clauseItem}>
                   <Text style={styles.clauseNum}>01</Text>
                   <View style={{ flex: 1 }}>
@@ -192,7 +217,7 @@ export default function ReviewAgreementScreen() {
 
                 {translatedAddons.map((addon, idx) => (
                   <View key={`addon-${idx}`} style={styles.clauseItem}>
-                    <Text style={styles.clauseNum}>{String(idx + 2).padStart(2, '0')}</Text>
+                    <Text style={styles.clauseNum}>{String(idx + 6).padStart(2, '0')}</Text>
                     <Text style={styles.clauseText}>{addon.replace('_', ' ')} included in the base rent.</Text>
                   </View>
                 ))}
@@ -214,11 +239,12 @@ export default function ReviewAgreementScreen() {
 
           <View style={styles.actionContainer}>
             <TouchableOpacity style={styles.acknowledgeBtn} onPress={handleAcknowledge}>
-              <Text style={styles.acknowledgeBtnText}>Acknowledge & Sign</Text>
+              <Ionicons name="finger-print-outline" size={20} color={Colors.white} style={{ marginRight: 8 }} />
+              <Text style={styles.acknowledgeBtnText}>Sign with Biometrics</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={styles.revisionBtn} 
+            <TouchableOpacity
+              style={styles.revisionBtn}
               onPress={() => setIsRevisionModalVisible(true)}
             >
               <Text style={styles.revisionBtnText}>Request Revisions</Text>
@@ -229,7 +255,7 @@ export default function ReviewAgreementScreen() {
 
       {/* Revision Modal */}
       <Modal visible={isRevisionModalVisible} animationType="slide" transparent>
-        <KeyboardAvoidingView 
+        <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           style={styles.modalOverlay}
         >

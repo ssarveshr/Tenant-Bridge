@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,20 +7,62 @@ import {
   TouchableOpacity,
   SafeAreaView,
   StatusBar,
+  RefreshControl,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { Colors, Spacing, Radius } from "../../constants/Theme";
+import { Colors, Spacing, Radius } from "../../constants/theme";
 import Animated, { FadeInDown } from "react-native-reanimated";
-import { useDisputeStore } from "../../store/disputeStore";
+import { useDisputeStore, setActiveProcessingId } from "../../store/disputeStore";
+import { supabase } from "../../lib/supabase";
 
 export default function DisputesScreen() {
   const router = useRouter();
   const { disputes, fetchDisputes, isLoading } = useDisputeStore();
+  const [refreshing, setRefreshing] = useState(false);
+  const [userRole, setUserRole] = useState<'tenant' | 'owner' | null>(null);
 
-  React.useEffect(() => {
-    fetchDisputes();
+  const fetchUserProfile = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data, error } = await supabase
+          .from('users')
+          .select('is_owner, is_tenant')
+          .eq('id', user.id)
+          .single();
+        
+        if (data) {
+          setUserRole(data.is_owner ? 'owner' : 'tenant');
+        }
+      }
+    } catch (err: any) {
+      console.error("Fetch profile error:", err.message);
+    }
+  };
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchDisputes();
+    setRefreshing(false);
   }, []);
+
+  useEffect(() => {
+    fetchDisputes();
+    fetchUserProfile();
+  }, []);
+
+  const activeDisputes = disputes.filter(d => d.status !== 'Resolved');
+  const resolvedDisputes = disputes.filter(d => d.status === 'Resolved');
+
+  const handlePressDispute = (id: string) => {
+    setActiveProcessingId(id);
+    if (userRole === 'owner') {
+      router.push({ pathname: "/owner/dispute-review", params: { id } } as any);
+    } else {
+      router.push("/dispute-verdict" as any);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -34,6 +76,9 @@ export default function DisputesScreen() {
       <ScrollView 
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.accent]} />
+        }
       >
         {/* Raise New Dispute Action Card */}
         <TouchableOpacity 
@@ -51,30 +96,52 @@ export default function DisputesScreen() {
           <Ionicons name="chevron-forward" size={24} color={Colors.border} />
         </TouchableOpacity>
 
-        <Text style={styles.sectionTitle}>Active Resolutions</Text>
-        
-        {disputes.map((dispute, index) => (
-          <DisputeCard 
-            key={dispute.id}
-            title={dispute.title}
-            status={dispute.status === 'Pending' ? "AI Reviewing" : dispute.status}
-            timestamp={new Date(dispute.created_at).toLocaleDateString()}
-            category={dispute.category}
-            statusColor={dispute.status === 'Resolved' ? Colors.success : Colors.warning}
-            index={index}
-            resolved={dispute.status === 'Resolved'}
-            onPress={() => router.push("/dispute-verdict" as any)}
-          />
-        ))}
+        {activeDisputes.length > 0 && (
+          <>
+            <Text style={styles.sectionTitle}>Active Resolutions</Text>
+            {activeDisputes.map((dispute, index) => (
+              <DisputeCard 
+                key={dispute.id}
+                title={dispute.title}
+                status={dispute.status === 'Pending' ? "AI Reviewing" : dispute.status}
+                timestamp={new Date(dispute.created_at).toLocaleDateString()}
+                category={dispute.category}
+                statusColor={dispute.status === 'Escalated' ? Colors.danger : Colors.warning}
+                index={index}
+                resolved={false}
+                onPress={() => handlePressDispute(dispute.id)}
+              />
+            ))}
+          </>
+        )}
+
+        {resolvedDisputes.length > 0 && (
+          <>
+            <Text style={[styles.sectionTitle, { marginTop: Spacing.xl }]}>Resolved Disputes</Text>
+            {resolvedDisputes.map((dispute, index) => (
+              <DisputeCard 
+                key={dispute.id}
+                title={dispute.title}
+                status="Resolved"
+                timestamp={new Date(dispute.created_at).toLocaleDateString()}
+                category={dispute.category}
+                statusColor={Colors.success}
+                index={index}
+                resolved={true}
+                onPress={() => handlePressDispute(dispute.id)}
+              />
+            ))}
+          </>
+        )}
 
         {!isLoading && disputes.length === 0 && (
-          <Text style={{ textAlign: 'center', color: Colors.textSecondary, marginTop: 40 }}>
+          <Text style={styles.emptyText}>
             No active resolutions found.
           </Text>
         )}
 
-        {isLoading && (
-          <Text style={{ textAlign: 'center', color: Colors.textSecondary, marginTop: 40 }}>
+        {isLoading && !refreshing && (
+          <Text style={styles.emptyText}>
             Loading disputes...
           </Text>
         )}
@@ -88,8 +155,8 @@ export default function DisputesScreen() {
 function DisputeCard({ title, status, timestamp, category, statusColor, index, resolved, onPress }: any) {
   return (
     <Animated.View entering={FadeInDown.delay(index * 100 + 100).duration(500)}>
-      <TouchableOpacity 
-        style={styles.card} 
+      <TouchableOpacity
+        style={styles.card}
         activeOpacity={0.8}
         onPress={onPress}
       >
@@ -243,4 +310,11 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: Colors.accent,
   },
+  emptyText: {
+    textAlign: 'center',
+    color: Colors.textSecondary,
+    marginTop: 40,
+    fontSize: 15,
+    fontStyle: 'italic',
+  }
 });

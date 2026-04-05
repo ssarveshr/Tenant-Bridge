@@ -9,7 +9,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { Colors, Spacing, Radius } from "../constants/Theme";
+import { Colors, Spacing, Radius } from "../constants/theme";
 import Animated, { 
   FadeInUp, 
   ZoomIn, 

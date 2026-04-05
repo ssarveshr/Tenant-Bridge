@@ -10,7 +10,7 @@ import {
   StatusBar,
   Platform,
 } from "react-native";
-import { Colors, Spacing, Radius } from "../../constants/Theme";
+import { Colors, Spacing, Radius } from "../../constants/theme";
 import Animated, { FadeInUp, SlideInRight } from "react-native-reanimated";
 import { usePropertyStore } from "../../store/propertyStore";
 

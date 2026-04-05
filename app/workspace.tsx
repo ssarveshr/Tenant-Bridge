@@ -10,7 +10,7 @@ import {
   StatusBar,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { Colors, Spacing, Radius } from "../constants/Theme";
+import { Colors, Spacing, Radius } from "../constants/theme";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { useRouter } from "expo-router";
 import { usePropertyStore } from "../store/propertyStore";

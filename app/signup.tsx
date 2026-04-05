@@ -16,7 +16,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, { FadeInUp } from "react-native-reanimated";
-import { Colors, Radius, Spacing } from "../constants/Theme";
+import { Colors, Radius, Spacing } from "../constants/theme";
 import { supabase } from "../lib/supabase";
 import { useLanguage } from "../hooks/useLanguage";
 

@@ -12,17 +12,21 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { Colors, Spacing, Radius } from "../../constants/Theme";
+import { Colors, Spacing, Radius } from "../../constants/theme";
 import Animated, { FadeInUp } from "react-native-reanimated";
 import { supabase } from "../../lib/supabase";
+import { useReputationStore } from "../../store/reputationStore";
 
 export default function ProfileScreen() {
   const router = useRouter();
   const [profile, setProfile] = useState<any>(null);
+  const [authUser, setAuthUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { score, fetchReputation } = useReputationStore();
 
   useEffect(() => {
     fetchProfile();
+    fetchReputation();
   }, []);
 
   const fetchProfile = async () => {
@@ -33,6 +37,7 @@ export default function ProfileScreen() {
         setIsLoading(false);
         return;
       }
+      setAuthUser(user);
 
       const { data, error } = await supabase
         .from("users")
@@ -49,11 +54,19 @@ export default function ProfileScreen() {
       }
     } catch (error: any) {
       console.error("Error fetching profile:", error);
-      Alert.alert("Error", "Could not load profile data.");
     } finally {
       setIsLoading(false);
     }
   };
+
+  const getStatus = (s: number) => {
+    if (s >= 95) return { label: "Excellent Reputation", color: Colors.success };
+    if (s >= 80) return { label: "Good Reputation", color: Colors.accent };
+    if (s >= 60) return { label: "Fair Reputation", color: "#F59E0B" };
+    return { label: "Poor Reputation", color: Colors.danger };
+  };
+
+  const status = getStatus(score);
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
@@ -93,8 +106,8 @@ export default function ProfileScreen() {
             >
               <Ionicons name="person" size={48} color={Colors.accent} />
             </TouchableOpacity>
-            <Text style={styles.userName}>{profile?.name || "User"}</Text>
-            <Text style={styles.userEmail}>{profile?.email || "No email"}</Text>
+            <Text style={styles.userName}>{profile?.name || authUser?.user_metadata?.name || "User"}</Text>
+            <Text style={styles.userEmail}>{profile?.email || authUser?.email || "No email"}</Text>
             <View style={styles.roleBadge}>
               <Text style={styles.roleText}>
                 {profile?.is_tenant ? "Verified Tenant" : profile?.is_owner ? "Verified Owner" : "New User"}
@@ -112,10 +125,14 @@ export default function ProfileScreen() {
               style={{ alignItems: "center", width: "100%" }}
             >
               <Text style={styles.scoreLabel}>Trust Score</Text>
-              <Text style={styles.scoreValue}>100</Text>
-              <Text style={styles.scoreStatus}>Perfect Reputation</Text>
+              <Text style={styles.scoreValue}>{score}</Text>
+              <Text style={[styles.scoreStatus, { color: status.color }]}>{status.label}</Text>
               <View style={styles.scoreDivider} />
-              <Text style={styles.scoreDetail}>No deductions recorded. You're a top-tier user.</Text>
+              <Text style={styles.scoreDetail}>
+                {score === 100 
+                  ? "Perfect streak! You're a top-tier platform user." 
+                  : "Complete more successful agreements to boost your score."}
+              </Text>
             </TouchableOpacity>
           </Animated.View>
 

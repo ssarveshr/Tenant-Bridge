@@ -12,7 +12,7 @@ import {
   RefreshControl
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { Colors, Spacing, Radius } from "../../constants/Theme";
+import { Colors, Spacing, Radius } from "../../constants/theme";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { useTransactionStore } from "../../store/transactionStore";
 import { useLanguage } from "../../hooks/useLanguage";
