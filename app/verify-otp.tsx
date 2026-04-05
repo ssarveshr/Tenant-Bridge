@@ -98,19 +98,18 @@ export default function VerifyOtpScreen() {
         return;
       }
 
-      // If it's a signup flow, insert the additional user data into our custom users table
-      if (isSignup && data.user) {
+      // Ensure the user record exists in our public "users" table to satisfy foreign key constraints
+      if (data.user) {
         const { error: upsertError } = await supabase.from("users").upsert({
           id: data.user.id,
-          name: params.name,
-          email: params.email,
-          phone_number: formattedPhone,
+          name: params.name || data.user.user_metadata?.full_name || "Verified User",
+          email: params.email || data.user.email,
+          phone_number: formattedPhone || data.user.phone,
         }, { onConflict: 'id' });
 
         if (upsertError) {
-          console.error("Error creating user profile", upsertError);
-          // Non-blocking error alert, but continues since auth succeeded
-          Alert.alert("Profile Note", "We couldn't save your profile details, but you can update them later.");
+          console.error("Error creating/syncing user profile", upsertError);
+          // Non-blocking for the user, but ensures we know why it failed
         }
       }
 

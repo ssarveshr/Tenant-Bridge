@@ -1,69 +1,126 @@
+import { create } from 'zustand';
+import { supabase } from '../lib/supabase';
 import { setGlobalVerdict } from "../services/aiService";
 
 export type DisputeStatus = 'Pending' | 'Resolved' | 'Escalated';
 
 export interface Dispute {
   id: string;
+  user_id: string;
+  property_id: string;
   title: string;
   description: string;
   category: string;
   status: DisputeStatus;
-  date: string;
+  created_at: string;
   resolvedDate?: string;
   verdict?: string;
   imageUri?: string;
 }
 
-// Initial mock data to keep the UI populated
-let disputes: Dispute[] = [
-  {
-    id: "1",
-    title: "Water Leakage Issue",
-    description: "Ceiling leak in bathroom causing damage",
-    category: "Maintenance",
-    status: "Pending",
-    date: "Mar 28, 2026",
-  },
-  {
-    id: "2",
-    title: "Late Rent Payment",
-    description: "Payment delayed due to bank issues",
-    category: "Financial",
-    status: "Resolved",
-    date: "Feb 15, 2026",
-    resolvedDate: "Feb 18, 2026",
-    verdict: "Tenant provided bank proof. Late fee waived for this instance."
-  }
-];
+interface DisputeStore {
+  disputes: Dispute[];
+  isLoading: boolean;
+  activeProcessingId: string | null;
+  fetchDisputes: (propertyId?: string) => Promise<void>;
+  addDispute: (dispute: Omit<Dispute, 'id' | 'status' | 'created_at' | 'user_id'>) => Promise<Dispute>;
+  updateDisputeStatus: (id: string, status: DisputeStatus, verdict?: string) => Promise<void>;
+  setActiveProcessingId: (id: string | null) => void;
+  getDisputes: () => Dispute[];
+}
 
-export const getDisputes = () => [...disputes];
+export const useDisputeStore = create<DisputeStore>((set, get) => ({
+  disputes: [],
+  isLoading: false,
+  activeProcessingId: null,
 
-export const addDispute = (dispute: Omit<Dispute, 'id' | 'status' | 'date'>) => {
-  const newDispute: Dispute = {
-    ...dispute,
-    id: Date.now().toString(),
-    status: 'Pending',
-    date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-  };
-  disputes = [newDispute, ...disputes];
-  return newDispute;
-};
+  fetchDisputes: async (propertyId) => {
+    set({ isLoading: true });
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Auth required");
 
-export const updateDisputeStatus = (id: string, status: DisputeStatus, verdict?: string) => {
-  disputes = disputes.map(d => {
-    if (d.id === id) {
-      return {
-        ...d,
-        status,
-        verdict: verdict || d.verdict,
-        resolvedDate: status === 'Resolved' ? new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : d.resolvedDate
-      };
+      let query = supabase.from('disputes').select('*');
+      
+      // If propertyId provided, filter by property (Owner View)
+      // Else filter by current user (Tenant View)
+      if (propertyId) {
+        query = query.eq('property_id', propertyId);
+      } else {
+        query = query.eq('user_id', user.id);
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false });
+
+      if (error) throw error;
+      set({ disputes: data as Dispute[] || [], isLoading: false });
+    } catch (err) {
+      console.error("Fetch Disputes Error:", err);
+      set({ isLoading: false });
     }
-    return d;
-  });
-};
+  },
 
-// State for the currently processing dispute
-let activeProcessingId: string | null = null;
-export const setActiveProcessingId = (id: string | null) => { activeProcessingId = id; };
-export const getActiveProcessingId = () => activeProcessingId;
+  addDispute: async (newDisputeData) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Auth required");
+
+      const { data, error } = await supabase
+        .from('disputes')
+        .insert([{
+          ...newDisputeData,
+          user_id: user.id,
+          status: 'Pending',
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      set((state) => ({
+        disputes: [data as Dispute, ...state.disputes]
+      }));
+
+      return data as Dispute;
+    } catch (err) {
+      console.error("Add Dispute Error:", err);
+      throw err;
+    }
+  },
+
+  updateDisputeStatus: async (id, status, verdict) => {
+    try {
+      const { error } = await supabase
+        .from('disputes')
+        .update({ 
+          status, 
+          verdict,
+          resolvedDate: status === 'Resolved' ? new Date().toISOString() : undefined 
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      set((state) => ({
+        disputes: state.disputes.map(d => 
+          d.id === id ? { ...d, status, verdict, resolvedDate: status === 'Resolved' ? new Date().toISOString() : d.resolvedDate } : d
+        )
+      }));
+    } catch (err) {
+      console.error("Update Dispute Error:", err);
+    }
+  },
+
+  setActiveProcessingId: (id) => set({ activeProcessingId: id }),
+  
+  getDisputes: () => get().disputes,
+}));
+
+// Backward compatibility helpers
+export const getDisputes = () => useDisputeStore.getState().disputes;
+export const addDispute = (dispute: Omit<Dispute, 'id' | 'status' | 'created_at' | 'user_id'>) => 
+  useDisputeStore.getState().addDispute(dispute);
+export const updateDisputeStatus = (id: string, status: DisputeStatus, verdict?: string) => 
+  useDisputeStore.getState().updateDisputeStatus(id, status, verdict);
+export const setActiveProcessingId = (id: string | null) => useDisputeStore.getState().setActiveProcessingId(id);
+export const getActiveProcessingId = () => useDisputeStore.getState().activeProcessingId;

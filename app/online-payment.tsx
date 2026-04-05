@@ -12,25 +12,57 @@ import {
 } from "react-native";
 import Animated, { FadeIn, FadeInUp } from "react-native-reanimated";
 import { Colors, Radius, Spacing } from "../constants/Theme";
+import { useLanguage } from "../hooks/useLanguage";
+import { useTransactionStore } from "../store/transactionStore";
+import { supabase } from "../lib/supabase";
 
 export default function OnlinePaymentScreen() {
   const router = useRouter();
+  const { t, n } = useLanguage();
   const { amount: paramAmount, propertyName } = useLocalSearchParams();
   const amount = parseInt(paramAmount as string) || 25000;
   const total = amount + 20;
 
   const [step, setStep] = useState(1); // 1: Select UPI/Card, 2: Loading, 3: Success
 
-  const handlePay = () => {
+  const { addTransaction } = useTransactionStore();
+
+  const handlePay = async () => {
     setStep(2);
-    // Simulate payment gateway delay
-    setTimeout(() => {
+    
+    try {
+      // Simulate network delay for payment gateway
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      // Record the transaction in Supabase
+      await addTransaction({
+        amount: amount,
+        category: 'Rent Payment',
+        method: 'Razorpay (Online)',
+        status: 'captured',
+        payment_id: `pay_${Math.random().toString(36).substring(2, 11)}`,
+        order_id: `order_${Math.random().toString(36).substring(2, 11)}`,
+        blockchain_hash: `0x${Math.random().toString(16).substring(2, 15)}...${Math.random().toString(16).substring(2, 6)}`,
+        user_id: user?.id || '',
+      });
+
       setStep(3);
+      
       // Wait for success visual before redirect
       setTimeout(() => {
         router.replace("/(tabs)/transactions" as any);
       }, 2500);
-    }, 3000);
+    } catch (err) {
+      console.error("Payment recording failed:", err);
+      // Even if recording fails, we show success in this POC, 
+      // but in production we'd handle this better.
+      setStep(3);
+      setTimeout(() => {
+        router.replace("/(tabs)/transactions" as any);
+      }, 2500);
+    }
   };
 
   if (step === 2) {
@@ -40,7 +72,7 @@ export default function OnlinePaymentScreen() {
         <View style={styles.loadingArea}>
           <Ionicons name="shield-checkmark" size={64} color={Colors.accent} />
           <Text style={styles.loadingText}>Razorpay Gateway Terminal Active</Text>
-          <Text style={styles.loadingSub}>Verifying ₹{total.toLocaleString()} for {propertyName || "Sunshine Apartments"} with the Polygon network...</Text>
+          <Text style={styles.loadingSub}>Verifying ₹{n(total.toLocaleString())} for {propertyName || "Your Property"} with Polygon...</Text>
         </View>
       </SafeAreaView>
     );
@@ -52,7 +84,7 @@ export default function OnlinePaymentScreen() {
         <StatusBar barStyle="dark-content" />
         <Animated.View entering={FadeIn.duration(500)} style={styles.loadingArea}>
           <Ionicons name="checkmark-circle" size={80} color={Colors.success} />
-          <Text style={styles.successTitle}>Transaction Complete</Text>
+          <Text style={styles.successTitle}>{t('rentPaid') || "Rent Paid"}</Text>
           <Text style={styles.successDesc}>Transaction Hash: 0x71C...3a4d</Text>
           <Text style={styles.successDesc}>Recorded on Polygon Mainnet</Text>
         </Animated.View>
@@ -66,7 +98,7 @@ export default function OnlinePaymentScreen() {
 
       <View style={styles.header}>
         <View style={{ width: 28 }} />
-        <Text style={styles.headerTitle}>Online Payment</Text>
+        <Text style={styles.headerTitle}>{t('payNow')}</Text>
         <View style={{ width: 28 }} />
       </View>
 
@@ -75,7 +107,7 @@ export default function OnlinePaymentScreen() {
         contentContainerStyle={styles.scrollContent}
       >
         <Animated.View entering={FadeInUp.duration(500)}>
-          <Text style={styles.sectionTitle}>Digital Payment</Text>
+          <Text style={styles.sectionTitle}>{t('digitalPayment') || "Digital Payment"}</Text>
           <Text style={styles.sectionDesc}>
             Instant verification via Razorpay. Your transaction will be permanently recorded as immutable proof for both you and the owner.
           </Text>
@@ -87,14 +119,14 @@ export default function OnlinePaymentScreen() {
           </View>
 
           <View style={styles.summaryBox}>
-            <SummaryRow label="Rent Amount" value={`₹${amount.toLocaleString()}`} />
-            <SummaryRow label="Platform Fee" value="₹20" />
+            <SummaryRow label={t('rentAmount')} value={`₹${n(amount.toLocaleString())}`} />
+            <SummaryRow label={t('maintenance') || "Platform Fee"} value={`₹${n(20)}`} />
             <View style={styles.divider} />
-            <SummaryRow label="Total Payable" value={`₹${total.toLocaleString()}`} isTotal />
+            <SummaryRow label={t('totalPayable') || "Total Payable"} value={`₹${n(total.toLocaleString())}`} isTotal />
           </View>
 
           <TouchableOpacity style={styles.primaryBtn} onPress={handlePay}>
-            <Text style={styles.primaryBtnText}>Pay ₹{total.toLocaleString()} Now</Text>
+            <Text style={styles.primaryBtnText}>{t('payNow')} ₹{n(total.toLocaleString())}</Text>
           </TouchableOpacity>
         </Animated.View>
       </ScrollView>

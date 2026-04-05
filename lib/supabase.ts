@@ -46,3 +46,21 @@ export const uploadFile = async (bucket: string, path: string, uri: string) => {
     throw error;
   }
 };
+/**
+ * Tests the connection to Supabase by fetching the current session
+ * @returns boolean indicating if the connection is successful
+ */
+export const testConnection = async () => {
+  try {
+    const { data, error } = await supabase.auth.getSession();
+    if (error) {
+      console.error("Supabase Connection Test Error:", error.message);
+      return false;
+    }
+    console.log("✅ Supabase Backend Connected Successfully");
+    return true;
+  } catch (err) {
+    console.error("Supabase Connection Test Exception:", err);
+    return false;
+  }
+};

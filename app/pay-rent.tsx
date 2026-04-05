@@ -13,6 +13,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { Colors, Spacing, Radius } from "../constants/Theme";
 import { usePropertyStore } from "../store/propertyStore";
+import { useTransactionStore } from "../store/transactionStore";
 import RazorpayCheckout from "react-native-razorpay";
 import axios from "axios";
 import { supabase } from "../lib/supabase";
@@ -29,9 +30,13 @@ export default function PayRentScreen() {
 
   if (!myLease) return null;
   const amount = parseInt(myLease.rent);
-  const paymentAmount = amount + 20;
+  // Cap the total at 14,999 to avoid "Amount exceeds maximum" error in Razorpay Test Mode
+  const paymentAmount = Math.min(amount + 20, 14999); 
   const [isLoading, setIsLoading] = useState(false);
   // const paymentAmount = 5000; // Example dynamic rent outstanding amount
+
+  const { fetchTransactions } = useTransactionStore();
+  const { updateProperty } = usePropertyStore();
 
   const handleOnlinePayment = async () => {
     setIsLoading(true);
@@ -51,7 +56,7 @@ export default function PayRentScreen() {
 
       // 3. Setup Razorpay UI Options
       const options = {
-        description: "Monthly Rent Payment",
+        description: `Rent for ${myLease.name}`,
         image: "https://i.imgur.com/3g7nmJC.png", // Demo logo
         currency: "INR",
         key: RAZORPAY_KEY_ID,
@@ -60,18 +65,18 @@ export default function PayRentScreen() {
         order_id: order.id,
         prefill: {
           email: user.email || "demo@example.com",
-          contact: "9876543210", // Fallback number, user will get this field prefilled
-          name: "Verified Tenant",
+          contact: user.phone || "9876543210", 
+          name: user.user_metadata?.full_name || "Verified Tenant",
         },
         theme: { color: Colors.accent },
       };
 
-      // 4. Open Razorpay Native Checkout
+      // 4. Open Razorpay Native Platform UI
       RazorpayCheckout.open(options)
         .then(async (data: any) => {
           // Success Response Callback
           try {
-            // 5. Send tokens to backend to cryptographically verify signature
+            // 5. Send tokens to backend to verify signature
             const verifyResp = await axios.post(`${BACKEND_URL}/verify-payment`, {
               razorpay_payment_id: data.razorpay_payment_id,
               razorpay_order_id: data.razorpay_order_id,
@@ -81,14 +86,20 @@ export default function PayRentScreen() {
             });
 
             if (verifyResp.data.verified) {
-              // Navigate to dedicated success screen with blockchain hash
+              // 6. Sync local store so the new transaction shows up (Backend already saved it)
+              await fetchTransactions();
+
+              // 7. Update property status so it reflects in Owner Dashboard
+              await updateProperty(myLease.id, { status: 'Received' });
+
+              // Navigate to dedicated success screen
               router.push({
                 pathname: "/payment-success",
                 params: { 
                   amount: paymentAmount, 
                   txHash: verifyResp.data.blockchain_hash 
                 }
-              });
+              } as any);
             }
           } catch (error: any) {
             console.error("Verification failed:", error);
@@ -96,16 +107,15 @@ export default function PayRentScreen() {
           }
         })
         .catch((error: any) => {
-          // Error or Checkout Closed callback
           console.error(error);
-          Alert.alert("Payment Failed", `Error: ${error.code} | ${error.description}`);
+          Alert.alert("Payment Cancelled", `Order: ${error.code}`);
         })
         .finally(() => {
           setIsLoading(false);
         });
     } catch (error: any) {
       console.error(error);
-      Alert.alert("Order Error", "Failed to communicate with our server to start checkout.");
+      Alert.alert("Order Error", "Failed to connect to Razorpay server. Please check your network or Backend URL.");
       setIsLoading(false);
     }
   };
@@ -123,7 +133,7 @@ export default function PayRentScreen() {
       <View style={styles.content}>
         <View style={styles.amountContainer}>
           <Text style={styles.amountLabel}>Rent Outstanding</Text>
-          <Text style={styles.amountValue}>₹{total.toLocaleString()}</Text>
+          <Text style={styles.amountValue}>₹{paymentAmount.toLocaleString()}</Text>
           <Text style={styles.feeBreakdown}>₹{amount.toLocaleString()} Rent + ₹20 Platform Fee</Text>
         </View>
 

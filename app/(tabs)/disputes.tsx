@@ -12,10 +12,16 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { Colors, Spacing, Radius } from "../../constants/Theme";
 import Animated, { FadeInDown } from "react-native-reanimated";
-import { getDisputes } from "../../store/disputeStore";
+import { useDisputeStore } from "../../store/disputeStore";
 
 export default function DisputesScreen() {
   const router = useRouter();
+  const { disputes, fetchDisputes, isLoading } = useDisputeStore();
+
+  React.useEffect(() => {
+    fetchDisputes();
+  }, []);
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
@@ -47,12 +53,12 @@ export default function DisputesScreen() {
 
         <Text style={styles.sectionTitle}>Active Resolutions</Text>
         
-        {getDisputes().map((dispute, index) => (
+        {disputes.map((dispute, index) => (
           <DisputeCard 
             key={dispute.id}
             title={dispute.title}
             status={dispute.status === 'Pending' ? "AI Reviewing" : dispute.status}
-            timestamp={dispute.date}
+            timestamp={new Date(dispute.created_at).toLocaleDateString()}
             category={dispute.category}
             statusColor={dispute.status === 'Resolved' ? Colors.success : Colors.warning}
             index={index}
@@ -61,9 +67,15 @@ export default function DisputesScreen() {
           />
         ))}
 
-        {getDisputes().length === 0 && (
+        {!isLoading && disputes.length === 0 && (
           <Text style={{ textAlign: 'center', color: Colors.textSecondary, marginTop: 40 }}>
             No active resolutions found.
+          </Text>
+        )}
+
+        {isLoading && (
+          <Text style={{ textAlign: 'center', color: Colors.textSecondary, marginTop: 40 }}>
+            Loading disputes...
           </Text>
         )}
 
@@ -75,7 +87,7 @@ export default function DisputesScreen() {
 
 function DisputeCard({ title, status, timestamp, category, statusColor, index, resolved, onPress }: any) {
   return (
-    <Animated.View entering={FadeInDown.delay(index * 100 + 400).duration(500)}>
+    <Animated.View entering={FadeInDown.delay(index * 100 + 100).duration(500)}>
       <TouchableOpacity 
         style={styles.card} 
         activeOpacity={0.8}

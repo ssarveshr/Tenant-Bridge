@@ -14,36 +14,57 @@ import Animated, { FadeInRight, FadeInUp } from "react-native-reanimated";
 import { Colors, Radius, Spacing } from "../../constants/Theme";
 import { useLanguage } from "../../hooks/useLanguage";
 import { usePropertyStore } from "../../store/propertyStore";
+import { useTransactionStore } from "../../store/transactionStore";
+import { getDisputes } from "../../store/disputeStore";
+import { supabase } from "../../lib/supabase";
+import { Platform } from "react-native";
 
 export default function OwnerHomeScreen() {
   const router = useRouter();
   const { t, n } = useLanguage();
   const { properties, fetchProperties, isLoading } = usePropertyStore();
+  const { transactions, fetchTransactionsForOwner } = useTransactionStore();
+  const [userName, setUserName] = React.useState("Owner");
 
   React.useEffect(() => {
     fetchProperties('owner');
+    fetchTransactionsForOwner();
+    
+    // Fetch user name
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) {
+        setUserName(data.user.user_metadata?.full_name || "Owner");
+      }
+    });
   }, []);
 
+  // Current Month Display
+  const currentMonth = new Date().toLocaleString('default', { month: 'long' });
+
   // Dynamic Stats Calculation
-  const totalRent = properties.reduce((acc, p) => acc + (parseInt(p.rent) || 0), 0);
+  const parseAmount = (val: string) => parseInt(val?.toString().replace(/[^0-9]/g, '')) || 0;
+  
+  const totalRent = properties.reduce((acc, p) => acc + parseAmount(p.rent), 0);
   const collectedRent = properties
-    .filter(p => p.status === 'Received')
-    .reduce((acc, p) => acc + (parseInt(p.rent) || 0), 0);
+    .filter(p => p.status?.toLowerCase() === 'received')
+    .reduce((acc, p) => acc + parseAmount(p.rent), 0);
   
   const collectionRate = totalRent > 0 ? (collectedRent / totalRent) * 100 : 0;
-  const pendingCount = properties.filter(p => p.status !== 'Received').length;
+  const pendingCount = properties.filter(p => p.status?.toLowerCase() !== 'received').length;
+  const ownerScore = properties.length > 0 ? Math.round(collectionRate) : 100;
 
-  const notifications = [
-    {
-      id: "2",
-      title: t('requiresAttention'),
-      desc: "Tenant Sarah filed a dispute for 'Sunshine Apt'",
+  const disputes = getDisputes();
+  const notifications = disputes
+    .filter(d => d.status === 'Pending')
+    .map(d => ({
+      id: d.id,
+      title: d.title,
+      desc: d.description,
       icon: "alert-circle-outline",
-      btnText: "Resolve",
+      btnText: t('resolve'),
       type: "dispute",
       route: "/dispute-verdict",
-    }
-  ];
+    }));
 
   return (
     <SafeAreaView style={styles.container}>
@@ -54,7 +75,7 @@ export default function OwnerHomeScreen() {
         <View>
           <Text style={styles.portfolioLabel}>{t('portfolioOverview')}</Text>
           <View style={styles.portfolioSelector}>
-            <Text style={styles.portfolioName}>My Real Estate</Text>
+            <Text style={styles.portfolioName}>{userName}'s Portfolio</Text>
             <Ionicons name="chevron-down" size={16} color={Colors.textPrimary} style={{ marginLeft: 6 }} />
           </View>
         </View>
@@ -75,7 +96,7 @@ export default function OwnerHomeScreen() {
           style={styles.collectionCard}
         >
           <View style={styles.collectionInfo}>
-            <Text style={styles.collectionLabel}>{t('rentCollection')} • March</Text>
+            <Text style={styles.collectionLabel}>{t('rentCollection')} • {currentMonth}</Text>
             <Text style={styles.collectionValue}>₹{n(collectedRent.toLocaleString())} / ₹{n(totalRent.toLocaleString())}</Text>
             <View style={styles.progressBarContainer}>
               <View style={[styles.progressBar, { width: `${collectionRate}%` }]} />
@@ -145,6 +166,7 @@ export default function OwnerHomeScreen() {
               unit={prop.unit}
               tenant={prop.tenantName}
               status={prop.status}
+              bridgeId={prop.bridge_id}
               statusColor={prop.status === 'Received' ? Colors.success : prop.status === 'Overdue' ? Colors.danger : Colors.warning}
               delay={300 + index * 100}
               t={t}
@@ -163,12 +185,42 @@ export default function OwnerHomeScreen() {
           >
             <StatCard
               label={t('ownerScore')}
-              value={n('100/100')}
+              value={n(`${ownerScore}/100`)}
               icon="star-outline"
               delay={600}
               color={Colors.accent}
             />
           </TouchableOpacity>
+        </View>
+
+        {/* Recent Portfolio Payments */}
+        <View style={styles.transactionsHeader}>
+          <Text style={styles.sectionTitle}>Recent Payments</Text>
+          <TouchableOpacity onPress={() => fetchTransactionsForOwner()}>
+            <Text style={styles.refreshBtn}>Refresh</Text>
+          </TouchableOpacity>
+        </View>
+        <View style={styles.transactionList}>
+          {transactions.length > 0 ? (
+            transactions.slice(0, 5).map((tx, idx) => (
+              <Animated.View 
+                key={tx.id} 
+                entering={FadeInRight.delay(700 + idx * 100).duration(500)}
+                style={styles.transactionItem}
+              >
+                <View style={styles.txIcon}>
+                  <Ionicons name="card-outline" size={20} color={Colors.success} />
+                </View>
+                <View style={styles.txInfo}>
+                  <Text style={styles.txTitle}>Rent Received</Text>
+                  <Text style={styles.txDate}>{new Date(tx.created_at).toLocaleDateString()}</Text>
+                </View>
+                <Text style={styles.txAmount}>+₹{n(tx.amount.toLocaleString())}</Text>
+              </Animated.View>
+            ))
+          ) : (
+            <Text style={styles.noData}>No payments recorded yet.</Text>
+          )}
         </View>
 
         <View style={{ height: 100 }} />
@@ -186,7 +238,7 @@ export default function OwnerHomeScreen() {
   );
 }
 
-function PropertyMiniCard({ id, name, unit, tenant, status, statusColor, delay, t }: any) {
+function PropertyMiniCard({ id, name, unit, tenant, status, bridgeId, statusColor, delay, t }: any) {
   const router = useRouter();
   return (
     <Animated.View
@@ -198,6 +250,10 @@ function PropertyMiniCard({ id, name, unit, tenant, status, statusColor, delay, 
         <Text style={[styles.pStatus, { color: statusColor }]}>• {unit}</Text>
       </View>
       <Text style={styles.pName}>{name}</Text>
+      <View style={styles.idRow}>
+        <Text style={styles.idLabel}>Bridge ID: </Text>
+        <Text style={styles.idValue}>{bridgeId || id.substring(0, 8).toUpperCase()}</Text>
+      </View>
       <Text style={styles.pTenant}>{t('tenant')}: {tenant}</Text>
       <TouchableOpacity
         style={styles.pFooter}
@@ -435,6 +491,22 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     marginBottom: 12,
   },
+  idRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  idLabel: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: Colors.textSecondary,
+  },
+  idValue: {
+    fontSize: 12,
+    fontWeight: "900",
+    color: Colors.accent,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  },
   pFooter: {
     flexDirection: "row",
     alignItems: "center",
@@ -487,4 +559,63 @@ const styles = StyleSheet.create({
     shadowRadius: 15,
     elevation: 8,
   },
+  transactionsHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: Spacing.m,
+  },
+  refreshBtn: {
+    fontSize: 14,
+    color: Colors.accent,
+    fontWeight: "700",
+  },
+  transactionList: {
+    backgroundColor: Colors.white,
+    borderRadius: Radius.m,
+    padding: Spacing.s,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    marginBottom: Spacing.xxl,
+  },
+  transactionItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F1F5F9",
+  },
+  txIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#F0FDF4",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  txInfo: {
+    flex: 1,
+  },
+  txTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: Colors.textPrimary,
+  },
+  txDate: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+  },
+  txAmount: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: Colors.success,
+  },
+  noData: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    textAlign: "center",
+    paddingVertical: 20,
+  }
 });

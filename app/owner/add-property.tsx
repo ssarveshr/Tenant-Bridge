@@ -40,7 +40,6 @@ export default function AddPropertyScreen() {
     dueDate: "",
     leaseImage: null as string | null,
     leaseDocumentName: null as string | null,
-    tenantPhone: "", // New field to link tenant
   });
 
   const pickImage = async () => {
@@ -130,7 +129,6 @@ export default function AddPropertyScreen() {
         ...form,
         leaseImage: form.leaseImage || "",
         leaseDocumentName: form.leaseDocumentName || "",
-        tenantPhone: form.tenantPhone
       }
     } as any);
   };
@@ -209,13 +207,6 @@ export default function AddPropertyScreen() {
                 placeholder="Enter locality" 
                 value={form.location}
                 onChangeText={(val: string) => setForm({ ...form, location: val })}
-              />
-              <InputGroup 
-                label={t('tenantPhone') || "Tenant Phone Number"} 
-                placeholder="10-digit number" 
-                keyboardType="phone-pad"
-                value={form.tenantPhone}
-                onChangeText={(val: string) => setForm({ ...form, tenantPhone: val })}
               />
               
               <Text style={styles.label}>{t('propertyType') || "Property Type"}</Text>

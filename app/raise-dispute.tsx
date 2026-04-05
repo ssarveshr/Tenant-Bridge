@@ -21,6 +21,7 @@ import { Colors, Spacing, Radius } from "../constants/Theme";
 import Animated, { FadeInUp, FadeIn, Layout } from "react-native-reanimated";
 import { useLanguage } from "../hooks/useLanguage";
 import { addDispute, setActiveProcessingId } from "../store/disputeStore";
+import { usePropertyStore } from "../store/propertyStore";
 import { getDocumentAsync } from "expo-document-picker";
 import { supabase } from "../lib/supabase";
 import * as FileSystem from 'expo-file-system/legacy';
@@ -44,19 +45,33 @@ export default function RaiseDisputeScreen() {
 
     setIsSubmitting(true);
     
-    // Simulate API call
-    setTimeout(() => {
-      addDispute({
-        title,
-        category,
-        description,
-      });
-      
+    // Use real lease data for the property_id
+    const myLease = usePropertyStore.getState().getMyLease();
+    if (!myLease) {
+      Alert.alert("Error", "No active lease found to link this dispute.");
       setIsSubmitting(false);
-      Alert.alert("Success", "Dispute submitted for AI Review", [
-        { text: "OK", onPress: () => router.back() }
-      ]);
-    }, 2000);
+      return;
+    }
+
+    // Simulate Network latency
+    setTimeout(async () => {
+      try {
+        await addDispute({
+          title,
+          category,
+          description,
+          property_id: myLease.id,
+        });
+        
+        setIsSubmitting(false);
+        Alert.alert("Success", "Dispute submitted for AI Review", [
+          { text: "OK", onPress: () => router.back() }
+        ]);
+      } catch (err) {
+        setIsSubmitting(false);
+        Alert.alert("Error", "Failed to submit dispute. Please try again.");
+      }
+    }, 1500);
   };
 
   const uploadFileToSupabase = async (uri: string, name: string) => {

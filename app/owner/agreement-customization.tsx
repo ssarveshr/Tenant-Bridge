@@ -15,7 +15,7 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { Colors, Spacing, Radius } from "../../constants/Theme";
 import Animated, { FadeInUp, SlideInRight } from "react-native-reanimated";
 import { useLanguage } from "../../hooks/useLanguage";
-import { addProperty } from "../../store/propertyStore";
+import { addProperty, usePropertyStore } from "../../store/propertyStore";
 
 export default function AgreementCustomizationScreen() {
   const router = useRouter();
@@ -23,19 +23,36 @@ export default function AgreementCustomizationScreen() {
   const params = useLocalSearchParams();
   
   const [isAnalyzing, setIsAnalyzing] = useState(true);
+  const [isFinalizing, setIsFinalizing] = useState(false);
   const [addons, setAddons] = useState<string[]>([]);
   const [customPoint, setCustomPoint] = useState("");
   const [customPoints, setCustomPoints] = useState<string[]>([]);
+  
+  // Core terms state
+  const [rent, setRent] = useState(params.rent as string || "");
+  const [deposit, setDeposit] = useState(params.deposit as string || "");
+  const [dueDate, setDueDate] = useState(params.dueDate as string || "Every 5th");
+
+  const getPropertyById = usePropertyStore(state => state.getPropertyById);
+  const updateProperty = usePropertyStore(state => state.updateProperty);
+  
+  const existingProp = params.id ? getPropertyById(params.id as string) : null;
 
   useEffect(() => {
-    // Simulate AI analysis of the uploaded document
-    const timer = setTimeout(() => {
-      setIsAnalyzing(false);
-    }, 2500);
-    return () => clearTimeout(timer);
-  }, []);
-
-  const [isFinalizing, setIsFinalizing] = useState(false);
+    if (params.mode === 'edit' && existingProp) {
+        setAddons(existingProp.agreementAddons || []);
+        setCustomPoints(existingProp.customPoints || []);
+        setRent(existingProp.rent);
+        setDeposit(existingProp.deposit);
+        setDueDate(existingProp.dueDate);
+        setIsAnalyzing(false);
+    } else {
+        const timer = setTimeout(() => {
+          setIsAnalyzing(false);
+        }, 2500);
+        return () => clearTimeout(timer);
+    }
+  }, [params.id, existingProp]);
 
   const toggleAddon = (addon: string) => {
     setAddons(prev => 
@@ -76,12 +93,11 @@ export default function AgreementCustomizationScreen() {
         unit: params.unit as string,
         location: params.location as string,
         type: params.type as any,
-        rent: params.rent as string,
-        deposit: params.deposit as string,
-        dueDate: params.dueDate as string,
+        rent: rent,       // Use local state
+        deposit: deposit, // Use local state
+        dueDate: dueDate, // Use local state
         leaseImage: finalFileUrl,
         leaseDocumentName: params.leaseDocumentName as string,
-        tenantPhone: params.tenantPhone as string,
         agreementAddons: addons,
         customPoints: customPoints,
       });
@@ -125,6 +141,39 @@ export default function AgreementCustomizationScreen() {
             <Ionicons name="checkmark-done-circle" size={32} color={Colors.success} />
             <Text style={styles.successTitle}>Document Analysis Complete</Text>
             <Text style={styles.successDesc}>We{"'"}ve parsed {params.leaseDocumentName}. Now, customize your additional terms.</Text>
+          </View>
+
+          <Text style={styles.sectionTitle}>Core Financial Terms</Text>
+          <View style={styles.coreTermsBox}>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Monthly Rent (₹)</Text>
+              <TextInput 
+                style={styles.coreInput}
+                value={rent}
+                onChangeText={setRent}
+                keyboardType="numeric"
+                placeholder="e.g. 25000"
+              />
+            </View>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Security Deposit (₹)</Text>
+              <TextInput 
+                style={styles.coreInput}
+                value={deposit}
+                onChangeText={setDeposit}
+                keyboardType="numeric"
+                placeholder="e.g. 75000"
+              />
+            </View>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Rent Due Date</Text>
+              <TextInput 
+                style={styles.coreInput}
+                value={dueDate}
+                onChangeText={setDueDate}
+                placeholder="e.g. Every 5th"
+              />
+            </View>
           </View>
 
           <Text style={styles.sectionTitle}>Standard Add-ons</Text>
@@ -434,4 +483,33 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "800",
   },
+  coreTermsBox: {
+    backgroundColor: Colors.white,
+    padding: 20,
+    borderRadius: Radius.m,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    marginBottom: 32,
+    gap: 16,
+  },
+  inputGroup: {
+    gap: 8,
+  },
+  inputLabel: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: Colors.textSecondary,
+    textTransform: "uppercase",
+  },
+  coreInput: {
+    backgroundColor: "#F8FAFC",
+    height: 50,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    fontSize: 15,
+    fontWeight: "600",
+    color: Colors.textPrimary,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  }
 });
