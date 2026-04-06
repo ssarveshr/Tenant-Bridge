@@ -1,50 +1,65 @@
-# Welcome to your Expo app 👋
+# 🏠 Tenant-Bridge
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Tenant-Bridge is a full-stack mobile and blockchain-powered platform designed to simplify tenant-landlord financial interactions, rental agreements, and property management. The platform integrates mobile technology, secure payments, and blockchain to create a transparent and modern rental ecosystem.
 
-## Get started
+---
 
-1. Install dependencies
+# 🚀 Features
 
-   ```bash
-   npm install
-   ```
+## 📱 Mobile Application
+- Cross-platform app (Android, iOS, Web)
+- Built with React Native + Expo
+- File-based routing using Expo Router
+- Smooth navigation with React Navigation
+- Biometric & Local Authentication
+- Document upload, share & print
+- Local storage using Async Storage
+- Gesture handling & animations
 
-2. Start the app
+## 💳 Payment System
+- Razorpay integration
+- Secure rent payments
+- Transaction tracking
+- Payment verification
 
-   ```bash
-   npx expo start
-   ```
+## 🔐 Authentication & Database
+- Supabase authentication
+- User roles:
+  - Tenant
+  - Owner
+  - Both supported
+- Real-time database updates
 
-In the output, you'll find options to open the app in a
+## ⛓️ Blockchain Integration
+- Ethereum smart contracts
+- Hardhat development environment
+- Sepolia Testnet deployment
+- Immutable transaction records
+- Tenant-Landlord registry
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+---
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+# 🧠 Tech Stack
 
-## Get a fresh project
+## Frontend
+- React Native
+- Expo
+- TypeScript
+- Expo Router
+- Zustand (State Management)
 
-When you're ready, run:
+## Backend
+- Node.js
+- Express.js
+- Supabase
+- Razorpay API
+- Ethers.js
 
-```bash
-npm run reset-project
-```
+## Blockchain
+- Solidity
+- Hardhat
+- Ethereum (Sepolia Testnet)
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+---
 
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+# 📂 Project Structure
