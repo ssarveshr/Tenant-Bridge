@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -7,17 +7,73 @@ import {
   TouchableOpacity,
   SafeAreaView,
   StatusBar,
-  Image,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { Colors, Spacing, Radius } from "../../constants/Theme";
+import { Colors, Spacing, Radius } from "../../constants/theme";
 import Animated, { FadeInUp } from "react-native-reanimated";
+import { supabase } from "../../lib/supabase";
+import { useReputationStore } from "../../store/reputationStore";
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const [profile, setProfile] = useState<any>(null);
+  const [authUser, setAuthUser] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const { score, fetchReputation } = useReputationStore();
 
-  const handleLogout = () => {
+  useEffect(() => {
+    fetchProfile();
+    fetchReputation();
+  }, []);
+
+  const fetchProfile = async () => {
+    setIsLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setIsLoading(false);
+        return;
+      }
+      setAuthUser(user);
+
+      const { data, error } = await supabase
+        .from("users")
+        .select("*")
+        .eq("id", user.id)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        throw error;
+      }
+
+      if (data) {
+        setProfile(data);
+      }
+    } catch (error: any) {
+      console.error("Error fetching profile:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const getStatus = (s: number) => {
+    if (s >= 95) return { label: "Excellent Reputation", color: Colors.success };
+    if (s >= 80) return { label: "Good Reputation", color: Colors.accent };
+    if (s >= 60) return { label: "Fair Reputation", color: "#F59E0B" };
+    return { label: "Poor Reputation", color: Colors.danger };
+  };
+
+  const status = getStatus(score);
+
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      Alert.alert("Logout Error", error.message);
+      return;
+    }
     router.replace("/");
   };
 
@@ -29,76 +85,99 @@ export default function ProfileScreen() {
         <Text style={styles.headerTitle}>Profile</Text>
       </View>
 
-      <ScrollView 
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
-        {/* User Bio Area */}
-        <Animated.View 
-          entering={FadeInUp.delay(100).duration(500)}
-          style={styles.bioCard}
+      {isLoading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={Colors.accent} />
+        </View>
+      ) : (
+        <ScrollView 
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
         >
-          <TouchableOpacity 
-            onLongPress={() => console.log("Property Switching Triggered")}
-            activeOpacity={0.9}
-            style={styles.avatarLarge}
+          {/* User Bio Area */}
+          <Animated.View 
+            entering={FadeInUp.delay(100).duration(500)}
+            style={styles.bioCard}
           >
-            <Ionicons name="person" size={48} color={Colors.accent} />
-          </TouchableOpacity>
-          <Text style={styles.userName}>Demo User</Text>
-          <Text style={styles.userEmail}>demo@tenantbridge.com</Text>
-          <View style={styles.roleBadge}>
-            <Text style={styles.roleText}>Verified Tenant</Text>
-          </View>
-        </Animated.View>
+            <TouchableOpacity 
+              onLongPress={() => console.log("Property Switching Triggered")}
+              activeOpacity={0.9}
+              style={styles.avatarLarge}
+            >
+              <Ionicons name="person" size={48} color={Colors.accent} />
+            </TouchableOpacity>
+            <Text style={styles.userName}>{profile?.name || authUser?.user_metadata?.name || "User"}</Text>
+            <Text style={styles.userEmail}>{profile?.email || authUser?.email || "No email"}</Text>
+            <View style={styles.roleBadge}>
+              <Text style={styles.roleText}>
+                {profile?.is_tenant ? "Verified Tenant" : profile?.is_owner ? "Verified Owner" : "New User"}
+              </Text>
+            </View>
+          </Animated.View>
 
-        <Animated.View 
-          entering={FadeInUp.delay(200).duration(500)}
-          style={styles.scoreCard}
-        >
-          <TouchableOpacity 
-            activeOpacity={0.8}
-            onPress={() => router.push("/credit-score" as any)}
-            style={{ alignItems: "center", width: "100%" }}
+          <Animated.View 
+            entering={FadeInUp.delay(200).duration(500)}
+            style={styles.scoreCard}
           >
-            <Text style={styles.scoreLabel}>Trust Score</Text>
-            <Text style={styles.scoreValue}>100</Text>
-            <Text style={styles.scoreStatus}>Perfect Reputation</Text>
-            <View style={styles.scoreDivider} />
-            <Text style={styles.scoreDetail}>No deductions recorded. You're a top-tier tenant.</Text>
-          </TouchableOpacity>
-        </Animated.View>
+            <TouchableOpacity 
+              activeOpacity={0.8}
+              onPress={() => router.push("/credit-score" as any)}
+              style={{ alignItems: "center", width: "100%" }}
+            >
+              <Text style={styles.scoreLabel}>Trust Score</Text>
+              <Text style={styles.scoreValue}>{score}</Text>
+              <Text style={[styles.scoreStatus, { color: status.color }]}>{status.label}</Text>
+              <View style={styles.scoreDivider} />
+              <Text style={styles.scoreDetail}>
+                {score === 100 
+                  ? "Perfect streak! You're a top-tier platform user." 
+                  : "Complete more successful agreements to boost your score."}
+              </Text>
+            </TouchableOpacity>
+          </Animated.View>
 
         {/* Settings Group */}
         <View style={styles.settingsGroup}>
-          <SettingItem icon="document-text-outline" label="My Agreements" />
-          <SettingItem icon="card-outline" label="Payment Methods" />
-          <SettingItem icon="notifications-outline" label="Push Notifications" />
-          <SettingItem icon="shield-checkmark-outline" label="Switch to Owner View" color={Colors.accent} />
+          <SettingItem 
+            icon="document-text-outline" 
+            label="My Agreements" 
+            onPress={() => router.push("/my-agreements" as any)} 
+          />
+          <SettingItem 
+            icon="card-outline" 
+            label="Payment Methods" 
+            onPress={() => router.push("/payment-methods" as any)} 
+          />
+          <SettingItem 
+            icon="notifications-outline" 
+            label="Push Notifications" 
+            onPress={() => router.push("/notification-settings" as any)} 
+          />
         </View>
 
-        <TouchableOpacity 
-          style={styles.logoutBtn}
-          onPress={handleLogout}
-        >
-          <Ionicons name="log-out-outline" size={20} color={Colors.danger} />
-          <Text style={styles.logoutText}>Logout</Text>
-        </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.logoutBtn}
+            onPress={handleLogout}
+          >
+            <Ionicons name="log-out-outline" size={20} color={Colors.danger} />
+            <Text style={styles.logoutText}>Logout</Text>
+          </TouchableOpacity>
 
-        <View style={styles.footer}>
-          <Text style={styles.version}>TenantBridge v1.0.0</Text>
-          <Text style={styles.copyright}>© 2026 TenantBridge. All rights reserved.</Text>
-        </View>
+          <View style={styles.footer}>
+            <Text style={styles.version}>TenantBridge v1.0.0</Text>
+            <Text style={styles.copyright}>© 2026 TenantBridge. All rights reserved.</Text>
+          </View>
 
-        <View style={{ height: 100 }} />
-      </ScrollView>
+          <View style={{ height: 100 }} />
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 }
 
-function SettingItem({ icon, label, color = Colors.textPrimary }: any) {
+function SettingItem({ icon, label, color = Colors.textPrimary, onPress }: any) {
   return (
-    <TouchableOpacity style={styles.settingItem} activeOpacity={0.6}>
+    <TouchableOpacity style={styles.settingItem} activeOpacity={0.6} onPress={onPress}>
       <View style={styles.settingLeft}>
         <Ionicons name={icon} size={22} color={color} />
         <Text style={[styles.settingLabel, { color }]}>{label}</Text>
@@ -123,6 +202,11 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: "800",
     color: Colors.textPrimary,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
   scrollContent: {
     padding: Spacing.xl,

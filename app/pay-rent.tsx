@@ -1,28 +1,131 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
   StatusBar,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { Colors, Spacing, Radius } from "../constants/Theme";
-import Animated, { FadeInUp } from "react-native-reanimated";
+import { Colors, Spacing, Radius } from "../constants/theme";
+import { usePropertyStore } from "../store/propertyStore";
+import { useTransactionStore } from "../store/transactionStore";
+import RazorpayCheckout from "react-native-razorpay";
+import axios from "axios";
+import { supabase } from "../lib/supabase";
+
+// Important: Define these in your root `.env` file!
+// e.g. EXPO_PUBLIC_BACKEND_URL=http://YOUR_LOCAL_IP:5000/api/payment
+// e.g. EXPO_PUBLIC_RAZORPAY_KEY_ID=YOUR_TEST_KEY_ID
+const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || "http://192.168.1.100:5000/api/payment";
+const RAZORPAY_KEY_ID = process.env.EXPO_PUBLIC_RAZORPAY_KEY_ID || "YOUR_TEST_KEY_ID";
 
 export default function PayRentScreen() {
   const router = useRouter();
+  const myLease = usePropertyStore((state) => state.getMyLease());
+
+  if (!myLease) return null;
+  const amount = parseInt(myLease.rent);
+  // Cap the total at 14,999 to avoid "Amount exceeds maximum" error in Razorpay Test Mode
+  const paymentAmount = Math.min(amount + 20, 14999); 
+  const [isLoading, setIsLoading] = useState(false);
+  // const paymentAmount = 5000; // Example dynamic rent outstanding amount
+
+  const { fetchTransactions } = useTransactionStore();
+  const { updateProperty } = usePropertyStore();
+
+  const handleOnlinePayment = async () => {
+    setIsLoading(true);
+    try {
+      // 1. Get Logged in User ID from Supabase
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        Alert.alert("Authentication Error", "You must be logged in to pay rent.");
+        setIsLoading(false);
+        return;
+      }
+
+      // 2. We request our backend to securely create an Order with Razorpay
+      const { data: order } = await axios.post(`${BACKEND_URL}/create-order`, {
+        amount: paymentAmount,
+      });
+
+      // 3. Setup Razorpay UI Options
+      const options = {
+        description: `Rent for ${myLease.name}`,
+        image: "https://i.imgur.com/3g7nmJC.png", // Demo logo
+        currency: "INR",
+        key: RAZORPAY_KEY_ID,
+        amount: order.amount,
+        name: "Tenant-Bridge",
+        order_id: order.id,
+        prefill: {
+          email: user.email || "demo@example.com",
+          contact: user.phone || "9876543210", 
+          name: user.user_metadata?.full_name || "Verified Tenant",
+        },
+        theme: { color: Colors.accent },
+      };
+
+      // 4. Open Razorpay Native Platform UI
+      RazorpayCheckout.open(options)
+        .then(async (data: any) => {
+          // Success Response Callback
+          try {
+            // 5. Send tokens to backend to verify signature
+            const verifyResp = await axios.post(`${BACKEND_URL}/verify-payment`, {
+              razorpay_payment_id: data.razorpay_payment_id,
+              razorpay_order_id: data.razorpay_order_id,
+              razorpay_signature: data.razorpay_signature,
+              user_id: user.id,
+              amount: paymentAmount,
+            });
+
+            if (verifyResp.data.verified) {
+              // 6. Sync local store so the new transaction shows up (Backend already saved it)
+              await fetchTransactions();
+
+              // 7. Update property status so it reflects in Owner Dashboard
+              await updateProperty(myLease.id, { status: 'Received' });
+
+              // Navigate to dedicated success screen
+              router.push({
+                pathname: "/payment-success",
+                params: { 
+                  amount: paymentAmount, 
+                  txHash: verifyResp.data.blockchain_hash 
+                }
+              } as any);
+            }
+          } catch (error: any) {
+            console.error("Verification failed:", error);
+            Alert.alert("Verification Error", "Payment captured, but server failed to verify signature.");
+          }
+        })
+        .catch((error: any) => {
+          console.error(error);
+          Alert.alert("Payment Cancelled", `Order: ${error.code}`);
+        })
+        .finally(() => {
+          setIsLoading(false);
+        });
+    } catch (error: any) {
+      console.error(error);
+      Alert.alert("Order Error", "Failed to connect to Razorpay server. Please check your network or Backend URL.");
+      setIsLoading(false);
+    }
+  };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
       <StatusBar barStyle="dark-content" />
       
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
-        </TouchableOpacity>
+        <View style={{ width: 24 }} />
         <Text style={styles.headerTitle}>Pay Rent</Text>
         <View style={{ width: 24 }} />
       </View>
@@ -30,15 +133,24 @@ export default function PayRentScreen() {
       <View style={styles.content}>
         <View style={styles.amountContainer}>
           <Text style={styles.amountLabel}>Rent Outstanding</Text>
-          <Text style={styles.amountValue}>₹25,020</Text>
-          <Text style={styles.feeBreakdown}>₹25,000 Rent + ₹20 Platform Fee</Text>
+          <Text style={styles.amountValue}>₹{paymentAmount.toLocaleString()}</Text>
+          <Text style={styles.feeBreakdown}>₹{amount.toLocaleString()} Rent + ₹20 Platform Fee</Text>
         </View>
 
         <Text style={styles.sectionTitle}>Select Payment Method</Text>
-        
-        <TouchableOpacity style={styles.methodCard} activeOpacity={0.8}>
+
+        <TouchableOpacity 
+          style={styles.methodCard} 
+          activeOpacity={0.8}
+          onPress={handleOnlinePayment}
+          disabled={isLoading}
+        >
           <View style={styles.iconBox}>
-            <Ionicons name="card-outline" size={28} color={Colors.accent} />
+            {isLoading ? (
+              <ActivityIndicator color={Colors.accent} />
+            ) : (
+              <Ionicons name="card-outline" size={28} color={Colors.accent} />
+            )}
           </View>
           <View style={styles.methodInfo}>
             <Text style={styles.methodTitle}>Pay Online</Text>
@@ -47,25 +159,12 @@ export default function PayRentScreen() {
           <Ionicons name="chevron-forward" size={24} color={Colors.border} />
         </TouchableOpacity>
 
-        <TouchableOpacity 
-          style={[styles.methodCard, { marginTop: Spacing.m }]} 
-          activeOpacity={0.8}
-          onPress={() => console.log("Offline Flow Started")}
-        >
-          <View style={[styles.iconBox, { backgroundColor: "#F0FDF4" }]}>
-            <Ionicons name="camera-outline" size={28} color={Colors.success} />
-          </View>
-          <View style={styles.methodInfo}>
-            <Text style={styles.methodTitle}>Record Offline Payment</Text>
-            <Text style={styles.methodDesc}>Upload receipt for verification</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={24} color={Colors.border} />
-        </TouchableOpacity>
+        
 
         <View style={styles.payoutPolicy}>
           <Ionicons name="shield-checkmark-outline" size={20} color={Colors.textSecondary} />
           <Text style={styles.payoutPolicyText}>
-            All transactions are recorded on the Polygon blockchain for immutable proof.
+            All transactions are recorded on the Ethereum blockchain for immutable proof.
           </Text>
         </View>
       </View>

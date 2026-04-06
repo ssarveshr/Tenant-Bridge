@@ -10,12 +10,17 @@ import {
   Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import { Colors, Spacing, Radius } from "../../../../constants/Theme";
+import { useRouter, useLocalSearchParams } from "expo-router";
+import { Colors, Spacing, Radius } from "../../../../constants/theme";
 import Animated, { FadeIn } from "react-native-reanimated";
+import { usePropertyStore } from "../../../../store/propertyStore";
 
 export default function OwnerManageAgreementScreen() {
   const router = useRouter();
+  const { id } = useLocalSearchParams();
+  const property = usePropertyStore((state) => 
+    state.properties.find(p => p.id === id) || state.properties[0]
+  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -23,8 +28,8 @@ export default function OwnerManageAgreementScreen() {
       
       <View style={styles.header}>
         <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle}>Digital Agreement Intelligence</Text>
-          <Text style={styles.headerSubtitle}>Shared Source of Truth</Text>
+          <Text style={styles.headerTitle}>Digital Agreement</Text>
+          <Text style={styles.headerSubtitle}>Legal Source of Truth</Text>
         </View>
         <TouchableOpacity onPress={() => router.push("/owner/upload-agreement" as any)}>
           <Ionicons name="cloud-upload-outline" size={24} color={Colors.accent} />
@@ -36,28 +41,58 @@ export default function OwnerManageAgreementScreen() {
         contentContainerStyle={styles.scrollContent}
       >
         <Animated.View entering={FadeIn.duration(400)}>
-          <Text style={styles.sectionTitle}>Shared Multi-Clause Contract</Text>
+          {property.status === 'Revision_Requested' && (
+            <View style={styles.revisionAlert}>
+              <View style={styles.alertHeader}>
+                <Ionicons name="chatbubble-ellipses-outline" size={20} color={Colors.warning} />
+                <Text style={styles.alertTitle}>Revision Requested by Tenant</Text>
+              </View>
+              <Text style={styles.revisionNote}>"{property.revisionNotes || "Please review the agreement terms."}"</Text>
+              <TouchableOpacity 
+                style={styles.modifyBtn}
+                onPress={() => router.push({
+                  pathname: "/owner/agreement-customization",
+                  params: { id: property.id, mode: 'edit' }
+                } as any)}
+              >
+                <Text style={styles.modifyBtnText}>Modify & Resubmit</Text>
+                <Ionicons name="create-outline" size={16} color={Colors.white} style={{ marginLeft: 6 }} />
+              </TouchableOpacity>
+            </View>
+          )}
+
+          <Text style={styles.sectionTitle}>Uploaded Agreement</Text>
           <View style={styles.agreementDoc}>
-            <Text style={styles.docText}>
-              {"\n"}
-              This Rental Agreement is made on Jan 1, 2026...
-              {"\n\n"}
-              <Text style={styles.highlight}>Clause 4.1: Monthly Rent Payment</Text>
-              {"\n"}
-              The Tenant shall pay a monthly rent of ₹25,000 on or before the 5th of every month.
-              {"\n\n"}
-              <Text style={styles.highlight}>Clause 7.2: Maintenance Responsibilities</Text>
-              {"\n"}
-              Minor repairs under ₹1,000 are the responsibility of the tenant.
-            </Text>
+            <View style={styles.docInfo}>
+              <Ionicons name="document-attach" size={24} color={Colors.accent} />
+              <View style={{ marginLeft: 12 }}>
+                <Text style={styles.fileName}>{property.leaseDocumentName || "Sunshine_Apts_Lease.pdf"}</Text>
+                <Text style={styles.fileSize}>
+                  {property.leaseDocumentName?.endsWith('.pdf') ? "2.4 MB" : "0.8 MB"} • Uploaded {new Date(property.createdAt).toLocaleDateString()}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.divider} />
+            <Text style={styles.docPreviewHeader}>Legal Source of Truth</Text>
+            <View style={styles.docSummaryText}>
+              <Text style={styles.summaryItem}>• Monthly rent fixed at ₹{parseInt(property.rent).toLocaleString()}.</Text>
+              <Text style={styles.summaryItem}>• Security deposit of ₹{parseInt(property.deposit).toLocaleString()} held by the owner.</Text>
+              <Text style={styles.summaryItem}>• Payment Due Date: {property.dueDate}.</Text>
+              {property.agreementAddons?.map((addon, idx) => (
+                <Text key={`addon-${idx}`} style={styles.summaryItem}>• {addon.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())} included.</Text>
+              ))}
+              {property.customPoints?.map((cp, idx) => (
+                <Text key={`cp-${idx}`} style={styles.summaryItem}>• {cp}.</Text>
+              ))}
+            </View>
           </View>
 
           <Text style={styles.aiLabel}>AI Extracted Terms</Text>
           <View style={styles.aiGrid}>
-            <AiCard label="Rent Amount" value="₹25,000 / mo" icon="cash-outline" />
-            <AiCard label="Due Date" value="Every 5th" icon="calendar-outline" />
-            <AiCard label="Security" value="₹75,000" icon="shield-outline" />
-            <AiCard label="Blockchain Status" value="Verified" icon="link-outline" />
+            <AiCard label="Rent Amount" value={`₹${parseInt(property.rent).toLocaleString()} / mo`} icon="cash-outline" />
+            <AiCard label="Due Date" value={property.dueDate} icon="calendar-outline" />
+            <AiCard label="Security" value={`₹${parseInt(property.deposit).toLocaleString()}`} icon="shield-outline" />
+            <AiCard label="Status" value="Verified" icon="link-outline" />
           </View>
         </Animated.View>
 
@@ -133,16 +168,43 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     marginBottom: Spacing.xl,
   },
-  docText: {
-    fontSize: 14,
-    color: "#334155",
-    lineHeight: 24,
-    fontFamily: Platform.OS === "ios" ? "Georgia" : "serif",
+  docInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
   },
-  highlight: {
+  fileName: {
+    fontSize: 16,
     fontWeight: "800",
-    color: Colors.accent,
-    backgroundColor: "#EFF6FF",
+    color: Colors.textPrimary,
+  },
+  fileSize: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    fontWeight: "600",
+  },
+  docPreviewHeader: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: Colors.textPrimary,
+    marginBottom: 10,
+    textTransform: "uppercase",
+  },
+  docSummaryText: {
+    marginTop: 10,
+  },
+  summaryItem: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    lineHeight: 22,
+    fontWeight: "500",
+    marginBottom: 4,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: Colors.border,
+    width: "100%",
+    marginVertical: 16,
   },
   aiLabel: {
     fontSize: 16,
@@ -198,4 +260,47 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginLeft: 12,
   },
+  revisionAlert: {
+    backgroundColor: "#FFFBEB",
+    borderRadius: Radius.m,
+    padding: Spacing.l,
+    borderWidth: 1,
+    borderColor: "#FEF3C7",
+    marginBottom: Spacing.xl,
+  },
+  alertHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 10,
+    gap: 8,
+  },
+  alertTitle: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: Colors.warning,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  revisionNote: {
+    fontSize: 15,
+    color: Colors.textPrimary,
+    lineHeight: 22,
+    fontStyle: 'italic',
+    marginBottom: 16,
+    marginLeft: 4,
+  },
+  modifyBtn: {
+    backgroundColor: Colors.accent,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: Radius.s,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modifyBtnText: {
+    color: Colors.white,
+    fontSize: 14,
+    fontWeight: "700",
+  }
 });

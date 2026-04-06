@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -10,22 +10,78 @@ import {
   StatusBar,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
+  Linking,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { Colors, Spacing, Radius } from "../constants/Theme";
-import Animated, { FadeInUp, SlideInRight } from "react-native-reanimated";
+import { Colors, Spacing, Radius } from "../constants/theme";
+import Animated, { FadeInUp } from "react-native-reanimated";
+import { useLanguage } from "../hooks/useLanguage";
+import { chatWithGemini } from "../services/aiService";
 
 export default function ChatScreen() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [inputText, setInputText] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const scrollViewRef = useRef<ScrollView>(null);
+  
+  const [messages, setMessages] = useState([
+    { id: 1, text: t('chatWelcome'), sender: "ai", time: "AI Assistant" },
+  ]);
 
-  const mockMessages = [
-    { id: 1, text: "Hello! I've uploaded the rent receipt for March.", sender: "tenant", time: "10:30 AM" },
-    { id: 2, text: "Thanks, John! I'll verify it in a moment.", sender: "owner", time: "10:32 AM" },
-    { id: 3, text: "Also, there's a minor leak in the bathroom faucet. Should I raise a dispute or handle it directly?", sender: "tenant", time: "10:33 AM" },
-    { id: 4, text: "If it's a minor leak, please check the Maintenance Clause in our Agreement. Usually, minor repairs under ₹1,000 are tenant-managed.", sender: "owner", time: "10:35 AM" },
-  ];
+  const handleSend = async () => {
+    if (!inputText.trim()) return;
+
+    const userMsg = {
+      id: Date.now(),
+      text: inputText,
+      sender: "user",
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+
+    setMessages(prev => [...prev, userMsg]);
+    setInputText("");
+    setIsLoading(true);
+
+    try {
+      // Prepare history for Gemini
+      const history = messages.map(msg => ({
+        role: msg.sender === "ai" ? "model" : "user",
+        parts: [{ text: msg.text }]
+      }));
+
+      // Adding mock agreement context to simulate the dynamic contract reading feature
+      const mockAgreement = `1. Rent is 25000 INR per month.\n2. Security deposit is 75000 INR.\n3. Eviction requires 30 days notice.\n4. Property must be kept clean. Major structural repairs are owner's responsibility.`;
+
+      let aiResponseText = await chatWithGemini(inputText, history, mockAgreement);
+      let isEscalated = false;
+      
+      if (aiResponseText.includes("[SERIOUS_DISPUTE_ESCALATION]")) {
+        isEscalated = true;
+        aiResponseText = aiResponseText.replace(/\[SERIOUS_DISPUTE_ESCALATION\]/g, "").trim();
+      }
+      
+      const aiMsg = {
+        id: Date.now() + 1,
+        text: aiResponseText,
+        sender: "ai",
+        time: "AI Assistant",
+        isEscalated: isEscalated
+      };
+
+      setMessages(prev => [...prev, aiMsg]);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
+  }, [messages, isLoading]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -34,21 +90,18 @@ export default function ChatScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
+          <Ionicons name="chevron-back" size={24} color={Colors.textPrimary} />
         </TouchableOpacity>
         <View style={styles.headerInfo}>
           <View style={styles.avatarMini}>
-            <Ionicons name="person" size={16} color={Colors.accent} />
+            <Ionicons name="sparkles" size={16} color={Colors.accent} />
           </View>
           <View>
-            <Text style={styles.chatName}>John Doe</Text>
-            <Text style={styles.statusText}>Tenant • Online</Text>
+            <Text style={styles.chatName}>{t('chat')}</Text>
+            <Text style={styles.statusText}>Powered by Gemini Flash</Text>
           </View>
         </View>
         <View style={styles.headerActions}>
-          <TouchableOpacity style={{ marginRight: 16 }}>
-            <Ionicons name="call-outline" size={22} color={Colors.textPrimary} />
-          </TouchableOpacity>
           <TouchableOpacity>
             <Ionicons name="ellipsis-vertical" size={22} color={Colors.textPrimary} />
           </TouchableOpacity>
@@ -61,14 +114,22 @@ export default function ChatScreen() {
         keyboardVerticalOffset={Platform.OS === "ios" ? 10 : 0}
       >
         <ScrollView 
+          ref={scrollViewRef}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.chatScroll}
         >
-          <Text style={styles.dateLabel}>TODAY</Text>
+          <Text style={styles.dateLabel}>AI DISPUTE & AGREEMENT ASSISTANT</Text>
           
-          {mockMessages.map((msg, index) => (
+          {messages.map((msg, index) => (
             <MessageBubble key={msg.id} msg={msg} index={index} />
           ))}
+
+          {isLoading && (
+            <Animated.View entering={FadeInUp} style={styles.loadingBubble}>
+              <ActivityIndicator size="small" color={Colors.accent} />
+              <Text style={styles.loadingText}>{t('aiThinking')}</Text>
+            </Animated.View>
+          )}
           
           <View style={{ height: 40 }} />
         </ScrollView>
@@ -76,19 +137,24 @@ export default function ChatScreen() {
         {/* Input Area */}
         <View style={styles.inputArea}>
           <TouchableOpacity style={styles.attachBtn}>
-            <Ionicons name="add-circle-outline" size={26} color={Colors.textSecondary} />
+            <Ionicons name="document-text-outline" size={26} color={Colors.textSecondary} />
           </TouchableOpacity>
           <View style={styles.inputWrapper}>
             <TextInput 
               style={styles.input}
-              placeholder="Message your tenant..."
+              placeholder={t('askGemini')}
               placeholderTextColor={Colors.textSecondary}
               value={inputText}
               onChangeText={setInputText}
               multiline
+              editable={!isLoading}
             />
           </View>
-          <TouchableOpacity style={styles.sendBtn}>
+          <TouchableOpacity 
+            style={[styles.sendBtn, (!inputText.trim() || isLoading) && styles.sendBtnDisabled]}
+            onPress={handleSend}
+            disabled={!inputText.trim() || isLoading}
+          >
             <Ionicons name="send" size={22} color={Colors.white} />
           </TouchableOpacity>
         </View>
@@ -98,7 +164,7 @@ export default function ChatScreen() {
 }
 
 function MessageBubble({ msg, index }: any) {
-  const isSelf = msg.sender === "owner";
+  const isSelf = msg.sender === "user";
   return (
     <Animated.View 
       entering={FadeInUp.delay(index * 100).duration(500)}
@@ -106,7 +172,21 @@ function MessageBubble({ msg, index }: any) {
     >
       <View style={[styles.bubble, isSelf ? styles.selfBubble : styles.otherBubble]}>
         <Text style={[styles.messageText, isSelf ? styles.selfText : styles.otherText]}>{msg.text}</Text>
-        <Text style={[styles.timeText, isSelf ? styles.selfTime : styles.otherTime]}>{msg.time}</Text>
+        
+        {msg.isEscalated && (
+          <TouchableOpacity 
+            style={styles.escalateBtn}
+            onPress={() => Linking.openURL('mailto:legal@tenantbridge.com?subject=Legal Assistance Request')}
+          >
+            <Ionicons name="warning" size={16} color={Colors.white} />
+            <Text style={styles.escalateBtnText}>Contact Legal Consultant</Text>
+          </TouchableOpacity>
+        )}
+
+        <View style={styles.bubbleFooter}>
+          {!isSelf && <Ionicons name="sparkles" size={10} color={Colors.accent} style={{ marginRight: 4 }} />}
+          <Text style={[styles.timeText, isSelf ? styles.selfTime : styles.otherTime]}>{msg.time}</Text>
+        </View>
       </View>
     </Animated.View>
   );
@@ -180,7 +260,7 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
   },
   bubble: {
-    maxWidth: "80%",
+    maxWidth: "85%",
     padding: 14,
     borderRadius: 18,
     shadowColor: "#000",
@@ -210,10 +290,14 @@ const styles = StyleSheet.create({
   otherText: {
     color: Colors.textPrimary,
   },
+  bubbleFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    marginTop: 6,
+  },
   timeText: {
     fontSize: 10,
-    marginTop: 6,
-    alignSelf: "flex-end",
     fontWeight: "600",
   },
   selfTime: {
@@ -221,6 +305,36 @@ const styles = StyleSheet.create({
   },
   otherTime: {
     color: Colors.textSecondary,
+  },
+  escalateBtn: {
+    backgroundColor: "#DC2626",
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: Radius.s,
+    marginTop: 12,
+    gap: 8,
+  },
+  escalateBtnText: {
+    color: Colors.white,
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  loadingBubble: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F1F5F9",
+    padding: 12,
+    borderRadius: 12,
+    alignSelf: "flex-start",
+    marginBottom: 20,
+    gap: 8,
+  },
+  loadingText: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    fontWeight: "600",
   },
   inputArea: {
     backgroundColor: Colors.white,
@@ -260,5 +374,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 10,
     elevation: 4,
+  },
+  sendBtnDisabled: {
+    backgroundColor: Colors.border,
+    shadowOpacity: 0,
+    elevation: 0,
   },
 });

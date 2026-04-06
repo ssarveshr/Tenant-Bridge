@@ -8,14 +8,70 @@ import {
   SafeAreaView,
   StatusBar,
   Image,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons, Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { Colors, Spacing, Radius } from "../../constants/Theme";
+import { Colors, Spacing, Radius } from "../../constants/theme";
 import Animated, { FadeInUp, FadeInRight } from "react-native-reanimated";
+import { useLanguage } from "../../hooks/useLanguage";
+import { usePropertyStore } from "../../store/propertyStore";
+import { useTransactionStore } from "../../store/transactionStore";
+import { useDisputeStore } from "../../store/disputeStore";
+import { useReputationStore } from "../../store/reputationStore";
+import { supabase } from "../../lib/supabase";
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { t, n, language } = useLanguage();
+  const { properties, fetchProperties, isLoading } = usePropertyStore();
+  const { transactions, fetchTransactions } = useTransactionStore();
+  const { disputes, fetchDisputes } = useDisputeStore();
+  const { score, fetchReputation } = useReputationStore();
+  const myLease = usePropertyStore((state) => state.getMyLease());
+
+  React.useEffect(() => {
+    fetchProperties('tenant');
+    fetchTransactions();
+    fetchDisputes();
+    fetchReputation();
+  }, []);
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.emptyState}>
+          <ActivityIndicator size="large" color={Colors.accent} />
+          <Text style={[styles.emptySubtitle, { marginTop: 20 }]}>Checking Connection...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+  if (!myLease) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="dark-content" />
+        <View style={styles.emptyState}>
+          <View style={styles.emptyIconCircle}>
+            <Ionicons name="home-outline" size={48} color={Colors.accent} />
+          </View>
+          <Text style={styles.emptyTitle}>Welcome to Tenant-Bridge</Text>
+          <Text style={styles.emptySubtitle}>
+            You haven't linked a rental agreement yet. Ask your owner for the Unique Property ID to get started.
+          </Text>
+          <TouchableOpacity 
+            style={styles.joinPrimaryBtn} 
+            onPress={() => router.push("/join-property" as any)}
+          >
+            <Text style={styles.joinPrimaryBtnText}>Connect to My Owner</Text>
+            <Ionicons name="arrow-forward" size={18} color={Colors.white} style={{ marginLeft: 8 }} />
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
@@ -23,20 +79,12 @@ export default function HomeScreen() {
       {/* Header with Avatar and Property Selector */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.propertyLabel}>Property Workspace</Text>
+          <Text style={styles.propertyLabel}>{t('propertyWorkspace')}</Text>
           <View style={styles.propertySelector}>
-            <Text style={styles.propertyName}>Sunshine Apartments</Text>
+            <Text style={styles.propertyName}>{myLease.name}</Text>
             <Ionicons name="chevron-down" size={16} color={Colors.textPrimary} style={{ marginLeft: 6 }} />
           </View>
         </View>
-        <TouchableOpacity 
-          onPress={() => router.push("/workspace" as any)}
-          activeOpacity={0.8}
-        >
-          <View style={styles.avatar}>
-            <Ionicons name="person" size={24} color={Colors.accent} />
-          </View>
-        </TouchableOpacity>
       </View>
 
       <ScrollView 
@@ -50,12 +98,12 @@ export default function HomeScreen() {
         >
           <View style={styles.statusRow}>
             <View>
-              <Text style={styles.rentLabel}>Monthly Rent</Text>
-              <Text style={styles.rentValue}>₹25,000</Text>
+              <Text style={styles.rentLabel}>{t('monthlyRent')}</Text>
+              <Text style={styles.rentValue}>₹{n(parseInt(myLease.rent).toLocaleString())}</Text>
             </View>
             <View style={styles.dueBadge}>
-              <Text style={styles.dueLabel}>Next Due</Text>
-              <Text style={styles.dueDate}>April 5, 2026</Text>
+              <Text style={styles.dueLabel}>{t('nextDue')}</Text>
+              <Text style={styles.dueDate}>{n(myLease.dueDate)}</Text>
             </View>
           </View>
         </Animated.View>
@@ -64,30 +112,34 @@ export default function HomeScreen() {
         <View style={styles.grid}>
           <DashboardCard 
             icon="receipt-outline" 
-            label="Transactions" 
-            value="3 Paid" 
+            label={t('transactions')} 
+            value={`${transactions.filter(tx => tx.status === 'Success').length} ${t('paid') || 'Paid'}`} 
             delay={200}
             color="#2563EB"
+            onPress={() => router.push("/(tabs)/transactions" as any)}
           />
           <DashboardCard 
             icon="alert-circle-outline" 
-            label="Disputes" 
-            value="None Active" 
+            label={t('disputes')} 
+            value={disputes.filter(d => d.status === 'Pending').length > 0 
+              ? `${disputes.filter(d => d.status === 'Pending').length} ${t('active') || 'Active'}` 
+              : t('noActiveDisputes')} 
             delay={300}
             color="#EF4444"
+            onPress={() => router.push("/(tabs)/disputes" as any)}
           />
           <DashboardCard 
             icon="document-text-outline" 
-            label="Agreement" 
-            value="Active" 
+            label={t('agreement')} 
+            value={myLease.status === 'Overdue' ? t('paymentDue') || "Payment Due" : t('active') || "Active"} 
             delay={400}
             color="#10B981"
             onPress={() => router.push("/workspace" as any)}
           />
           <DashboardCard 
             icon="star-outline" 
-            label="Trust Score" 
-            value="100/100" 
+            label={t('trustScore')} 
+            value={`${score}/100`} 
             delay={500}
             color="#F59E0B"
             onPress={() => router.push("/credit-score" as any)}
@@ -96,41 +148,80 @@ export default function HomeScreen() {
 
         {/* Recent Activity Section */}
         <View style={styles.activityHeader}>
-          <Text style={styles.sectionTitle}>Recent Activity</Text>
+          <Text style={styles.sectionTitle}>{t('recentActivity')}</Text>
           <TouchableOpacity>
-            <Text style={styles.viewAllBtn}>View All</Text>
+            <Text style={styles.viewAllBtn}>{t('viewAll')}</Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.activityList}>
-          <ActivityItem 
-            title="Rent Paid - March" 
-            date="Mar 5, 2026" 
-            amount="₹25,000"
-            status="success"
-            delay={600}
-          />
-          <ActivityItem 
-            title="Maintenance Issue" 
-            date="Feb 28, 2026" 
-            amount="Resolved"
-            status="info"
-            delay={700}
-          />
+          {transactions.length > 0 ? (
+            transactions.slice(0, 1).map((tx, idx) => (
+              <ActivityItem 
+                key={tx.id}
+                title={`${t('rentPaid') || "Rent Paid"} - ${new Date(tx.created_at).toLocaleString('default', { month: 'long' })}`} 
+                date={new Date(tx.created_at).toLocaleDateString()} 
+                amount={`₹${n(tx.amount.toLocaleString())}`}
+                status="success"
+                delay={600}
+              />
+            ))
+          ) : (
+            <ActivityItem 
+              title={t('onboarding') || "Welcome to Bridge"} 
+              date={new Date().toLocaleDateString()} 
+              amount={t('completed') || "Completed"}
+              status="success"
+              delay={600}
+            />
+          )}
+          
+          {disputes.length > 0 ? (
+            disputes.slice(0, 1).map((d, idx) => (
+              <ActivityItem 
+                key={d.id}
+                title={d.title} 
+                date={new Date(d.created_at).toLocaleDateString()} 
+                amount={d.status}
+                status={d.status === 'Resolved' ? 'success' : 'info'}
+                delay={700}
+              />
+            ))
+          ) : (
+             <ActivityItem 
+              title={t('noReports') || "No recent reports"} 
+              date="--" 
+              amount="--"
+              status="info"
+              delay={700}
+            />
+          )}
         </View>
 
-        <View style={{ height: 100 }} />
+        <View style={{ height: 40 }} />
+
+        {/* Action Button - Pay Rent (Now Scrollable) */}
+        <TouchableOpacity 
+          style={styles.payBtn} 
+          activeOpacity={0.9}
+          onPress={() => router.push("/pay-rent" as any)}
+        >
+          <Ionicons name="wallet-outline" size={24} color={Colors.white} />
+          <Text style={styles.payBtnText}>{t('payRent')}</Text>
+        </TouchableOpacity>
+
+        <View style={{ height: 60 }} />
       </ScrollView>
 
-      {/* Floating Action Button - Pay Rent */}
+      {/* Floating Action Button for Joining */}
       <TouchableOpacity 
         style={styles.fab} 
         activeOpacity={0.9}
-        onPress={() => router.push("/pay-rent" as any)}
+        onPress={() => router.push("/join-property" as any)}
       >
-        <Ionicons name="wallet-outline" size={24} color={Colors.white} />
-        <Text style={styles.fabText}>Pay Rent</Text>
+        <Ionicons name="add" size={32} color={Colors.white} />
       </TouchableOpacity>
+
     </SafeAreaView>
   );
 }
@@ -361,11 +452,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "800",
   },
-  fab: {
-    position: "absolute",
-    bottom: 30,
-    right: 24,
-    left: 24,
+  payBtn: {
     backgroundColor: Colors.accent,
     height: 60,
     borderRadius: Radius.m,
@@ -378,10 +465,75 @@ const styles = StyleSheet.create({
     shadowRadius: 20,
     elevation: 8,
   },
-  fabText: {
+  payBtnText: {
     color: Colors.white,
     fontSize: 16,
     fontWeight: "bold",
     marginLeft: 12,
   },
+  emptyState: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 40,
+    backgroundColor: Colors.white,
+  },
+  emptyIconCircle: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: "#F0F5FF",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 24,
+  },
+  emptyTitle: {
+    fontSize: 24,
+    fontWeight: "900",
+    color: Colors.textPrimary,
+    marginBottom: 12,
+    textAlign: "center",
+  },
+  emptySubtitle: {
+    fontSize: 15,
+    color: Colors.textSecondary,
+    textAlign: "center",
+    lineHeight: 22,
+    marginBottom: 40,
+  },
+  joinPrimaryBtn: {
+    backgroundColor: Colors.accent,
+    paddingHorizontal: 30,
+    height: 60,
+    borderRadius: Radius.m,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: Colors.accent,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.2,
+    shadowRadius: 20,
+    elevation: 8,
+  },
+  joinPrimaryBtnText: {
+    color: Colors.white,
+    fontSize: 16,
+    fontWeight: "800",
+  },
+  fab: {
+    position: 'absolute',
+    bottom: 30,
+    right: 24,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: Colors.accent,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: Colors.accent,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
+  }
 });

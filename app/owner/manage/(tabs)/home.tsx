@@ -7,16 +7,21 @@ import {
   TouchableOpacity,
   SafeAreaView,
   StatusBar,
-  Image,
-  Dimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import { Colors, Spacing, Radius } from "../../../../constants/Theme";
+import { useRouter, useLocalSearchParams } from "expo-router";
+import { Colors, Spacing, Radius } from "../../../../constants/theme";
 import Animated, { FadeInUp, FadeInRight } from "react-native-reanimated";
+import { usePropertyStore } from "../../../../store/propertyStore";
 
 export default function OwnerManageHomeScreen() {
   const router = useRouter();
+  const { id } = useLocalSearchParams();
+  const property = usePropertyStore((state) => 
+    state.properties.find(p => p.id === id) || state.properties[0]
+  );
+
+  const isRentDue = property.status !== 'Received';
 
   return (
     <SafeAreaView style={styles.container}>
@@ -27,7 +32,7 @@ export default function OwnerManageHomeScreen() {
         <View>
           <Text style={styles.propertyLabel}>Managing Property</Text>
           <View style={styles.propertySelector}>
-            <Text style={styles.propertyName}>Sunshine Apartments</Text>
+            <Text style={styles.propertyName}>{property.name}</Text>
             <Ionicons name="location" size={14} color={Colors.accent} style={{ marginLeft: 6 }} />
           </View>
         </View>
@@ -53,11 +58,17 @@ export default function OwnerManageHomeScreen() {
           <View style={styles.statusRow}>
             <View>
               <Text style={styles.rentLabel}>March Collection Status</Text>
-              <Text style={styles.rentValue}>₹25,000 Paid</Text>
+              <Text style={styles.rentValue}>₹{parseInt(property.rent).toLocaleString()} {property.status === 'Received' ? 'Received' : 'Pending'}</Text>
             </View>
-            <View style={styles.successBadge}>
-              <Ionicons name="checkmark-circle" size={18} color={Colors.success} />
-              <Text style={styles.successText}>Verified</Text>
+            <View style={[styles.successBadge, property.status !== 'Received' && { backgroundColor: '#FEF2F2' }]}>
+              <Ionicons 
+                name={property.status === 'Received' ? "checkmark-circle" : "time-outline"} 
+                size={18} 
+                color={property.status === 'Received' ? Colors.success : Colors.danger} 
+              />
+              <Text style={[styles.successText, property.status !== 'Received' && { color: Colors.danger }]}>
+                {property.status === 'Received' ? 'Verified' : 'Overdue'}
+              </Text>
             </View>
           </View>
           <View style={styles.divider} />
@@ -65,7 +76,7 @@ export default function OwnerManageHomeScreen() {
             <View style={styles.avatarMini}>
               <Ionicons name="person" size={16} color={Colors.accent} />
             </View>
-            <Text style={styles.tenantText}>Tenant John Doe • Trust Score 100</Text>
+            <Text style={styles.tenantText}>Tenant {property.tenantName} • Trust Score {property.tenantName === 'TBD' ? 'N/A' : '100'}</Text>
           </View>
         </Animated.View>
 
@@ -89,19 +100,19 @@ export default function OwnerManageHomeScreen() {
           />
           <ManageGridCard 
             icon="reader-outline" 
-            label="Intelligence" 
+            label="Agreement" 
             value="AI Active" 
             delay={400}
             color="#10B981"
             onPress={() => router.push("/owner/manage/(tabs)/agreement" as any)}
           />
           <ManageGridCard 
-            icon="chatbubbles-outline" 
-            label="Property Chat" 
-            value="1 Unread" 
+            icon="star-outline" 
+            label="Trust Score" 
+            value="100/100" 
             delay={500}
             color="#F59E0B"
-            onPress={() => router.push("/chat" as any)}
+            onPress={() => router.push("/credit-score" as any)}
           />
         </View>
 
@@ -133,15 +144,17 @@ export default function OwnerManageHomeScreen() {
         <View style={{ height: 100 }} />
       </ScrollView>
 
-      {/* Floating Action Button - Collect Rent Request */}
-      <TouchableOpacity 
-        style={styles.fab} 
-        activeOpacity={0.9}
-        onPress={() => console.log("Request Rent Pulse Sent")}
-      >
-        <Ionicons name="paper-plane" size={24} color={Colors.white} />
-        <Text style={styles.fabText}>Request Payment</Text>
-      </TouchableOpacity>
+      {/* Floating Action Button - Collect Rent Request (Only if due) */}
+      {isRentDue && (
+        <TouchableOpacity 
+          style={styles.fab} 
+          activeOpacity={0.9}
+          onPress={() => console.log("Request Rent Pulse Sent for " + property.id)}
+        >
+          <Ionicons name="paper-plane" size={24} color={Colors.white} />
+          <Text style={styles.fabText}>Request Payment</Text>
+        </TouchableOpacity>
+      )}
     </SafeAreaView>
   );
 }

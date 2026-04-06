@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tenant-Bridge | Interactive Presentation</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700;900&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --primary: #4F46E5;
+            --primary-light: #818CF8;
+            --accent: #06B6D4;
+            --bg: #F8FAFC;
+            --white: #FFFFFF;
+            --text-dark: #0F172A;
+            --text-light: #64748B;
+            --border: #E2E8F0;
+            --glow: rgba(79, 70, 229, 0.15);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-dark);
+            font-family: 'Inter', sans-serif;
+            overflow: hidden; /* Prevent default vertical scroll */
+            width: 100vw;
+            height: 100vh;
+        }
+
+        .slides-container {
+            display: flex;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            scroll-behavior: smooth;
+            width: 100vw;
+            height: 100vh;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        .slides-container::-webkit-scrollbar {
+            display: none;
+        }
+
+        h1, h2, h3 {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 900;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* --- Branding --- */
+        .nav {
+            padding: 10px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: fixed;
+            width: 100%;
+            z-index: 1000;
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+            background: rgba(248, 250, 252, 0.8);
+        }
+
+        .logo-box {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-symbol {
+            width: 30px;
+            height: 30px;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--white);
+            box-shadow: 0 8px 16px var(--glow);
+        }
+
+        .logo-text {
+            font-size: 20px;
+            font-weight: 900;
+            letter-spacing: -0.5px;
+            color: var(--text-dark);
+        }
+
+        /* --- Hero --- */
+        .hero {
+            min-height: 100vh;
+            flex: 0 0 100vw;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            position: relative;
+            scroll-snap-align: start;
+            background: radial-gradient(circle at 0% 0%, rgba(79, 70, 229, 0.05) 0%, transparent 40%),
+                        radial-gradient(circle at 100% 100%, rgba(6, 182, 212, 0.05) 0%, transparent 40%);
+        }
+
+        .hero-inner {
+            z-index: 10;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--white);
+            padding: 8px 16px;
+            border-radius: 100px;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--primary);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            margin-bottom: 32px;
+            border: 1px solid var(--border);
+        }
+
+        .hero-title {
+            font-size: clamp(3rem, 10vw, 5.5rem);
+            line-height: 1.05;
+            margin-bottom: 32px;
+            letter-spacing: -2px;
+        }
+
+        .gradient-text {
+            background: linear-gradient(to right, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero-desc {
+            font-size: 20px;
+            color: var(--text-light);
+            max-width: 700px;
+            margin: 0 auto 48px;
+            line-height: 1.6;
+        }
+
+        /* --- Vibrant Stats --- */
+        .stats {
+            padding: 120px 0;
+            background: var(--white);
+            flex: 0 0 100vw;
+            height: 100vh;
+            overflow-y: auto;
+            scroll-snap-align: start;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 32px;
+        }
+
+        .stat-card {
+            background: var(--white);
+            padding: 48px 32px;
+            border-radius: 32px;
+            border: 1px solid var(--border);
+            text-align: center;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.02);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-12px);
+            box-shadow: 0 40px 80px rgba(79, 70, 229, 0.1);
+            border-color: var(--primary-light);
+        }
+
+        .stat-icon {
+            width: 56px;
+            height: 56px;
+            background: #F1F5F9;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary);
+            margin: 0 auto 24px;
+        }
+
+        .stat-num {
+            font-size: 56px;
+            font-weight: 900;
+            color: var(--text-dark);
+            margin-bottom: 12px;
+            display: block;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: var(--text-light);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* --- Blockchain & AI Showcase --- */
+        .showcase {
+            padding: 80px 0;
+            flex: 0 0 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            scroll-snap-align: start;
+            background: var(--bg);
+        }
+
+        .showcase .container {
+            width: 100%;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+            gap: 40px;
+        }
+
+        .feature-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(20px);
+            padding: 48px;
+            border-radius: 40px;
+            border: 1px solid var(--white);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.04);
+            transition: all 0.3s ease;
+        }
+
+        .feature-card:hover {
+            background: var(--white);
+        }
+
+        .feature-title {
+            font-size: 26px;
+            margin-bottom: 20px;
+            color: var(--text-dark);
+        }
+
+        .feature-text {
+            color: var(--text-light);
+            font-size: 17px;
+            line-height: 1.8;
+        }
+
+        /* --- Indian Context Box --- */
+        .india-context {
+            margin-top: 80px;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            padding: 60px;
+            border-radius: 40px;
+            color: var(--white);
+            display: flex;
+            align-items: center;
+            gap: 60px;
+            flex-wrap: wrap;
+        }
+
+        .india-text {
+            flex: 1;
+            min-width: 300px;
+        }
+
+        .india-text h2 {
+            font-size: 36px;
+            margin-bottom: 24px;
+        }
+
+        .india-viz {
+            flex: 1;
+            min-width: 300px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 40px;
+            border-radius: 24px;
+            backdrop-filter: blur(10px);
+        }
+
+        /* --- Footer --- */
+        footer {
+            padding: 100px 0;
+            text-align: center;
+            border-top: 1px solid var(--border);
+            color: var(--text-light);
+            flex: 0 0 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            scroll-snap-align: start;
+        }
+
+        /* Reveal Animation */
+        .reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.8s cubic-bezier(0.2, 0.6, 0.4, 1);
+        }
+        .reveal.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .btn-main {
+            background: var(--primary);
+            color: var(--white);
+            padding: 20px 40px;
+            border-radius: 100px;
+            font-weight: 800;
+            font-size: 18px;
+            text-decoration: none;
+            display: inline-block;
+            box-shadow: 0 20px 40px rgba(79, 70, 229, 0.3);
+            transition: all 0.3s;
+        }
+
+        .btn-main:hover {
+            transform: scale(1.05);
+            box-shadow: 0 30px 60px rgba(79, 70, 229, 0.4);
+        }
+
+        @media (max-width: 768px) {
+            .hero-title { font-size: 40px; }
+            .india-context { padding: 30px; }
+            .container { padding: 0 20px; }
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="nav">
+        <div class="container" style="display: flex; justify-content: space-between; width: 100%;">
+            <div class="logo-box">
+                <img src="../assets/images/icon.png" alt="Tenant-Bridge Logo" class="logo-symbol" style="width: 88px; height: 88px; border-radius: 16px; object-fit: cover; box-shadow: 0 10px 30px rgba(79, 70, 229, 0.2);">
+                <span class="logo-text" style="font-size: 28px;">TenantBridge</span>
+            </div>
+            <div style="display: flex; gap: 24px; align-items: center;">
+                <a href="#stats" style="color: var(--primary); font-weight: 800; text-decoration: none; font-size: 14px;">MISSION</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="slides-container">
+        <section class="hero">
+            <div class="container hero-inner">
+                <div class="badge reveal">
+                    <i data-lucide="sparkles" size="14" style="margin-right: 8px;"></i>
+                    India's First Smart Rental Infrastructure
+                </div>
+                <h1 class="hero-title reveal">Trust in Every<br><span class="gradient-text">Square Foot.</span></h1>
+                <p class="hero-desc reveal">Revolutionizing Indian renting through AI-powered multilingual transparency and immutable blockchain security.</p>
+                <div class="reveal">
+                    <a href="#stats" class="btn-main">Explore the Impact</a>
+                </div>
+            </div>
+        </section>
+
+        <section class="stats" id="stats">
+            <div class="container">
+                <div style="text-align: center; margin-bottom: 80px;" class="reveal">
+                    <h2 style="font-size: 44px; margin-bottom: 20px;">The Indian Rental Crisis</h2>
+                    <p style="color: var(--text-light); font-size: 18px; max-width: 700px; margin: 0 auto;">Informal agreements lead to major financial leakage and social friction in our growing metros.</p>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card reveal">
+                        <div class="stat-icon"><i data-lucide="home"></i></div>
+                        <span class="stat-num"><span class="counter" data-target="1.1">0</span>Cr+</span>
+                        <span class="stat-label">Vacant Urban Homes</span>
+                        <p style="font-size: 12px; margin-top: 10px; color: var(--text-light);">Result of the massive "Trust Deficit" between owners and tenants.</p>
+                        <p class="indian-impact">Source: MoHUA / Census Projection</p>
+                    </div>
+
+                    <div class="stat-card reveal">
+                        <div class="stat-icon"><i data-lucide="gavel"></i></div>
+                        <span class="stat-num"><span class="counter" data-target="66">0</span>%</span>
+                        <span class="stat-label">Property Litigation</span>
+                        <p style="font-size: 12px; margin-top: 10px; color: var(--text-light);">Of all pending civil cases in India are property or land related.</p>
+                        <p class="indian-impact">Source: National Judicial Data Grid (NJDG)</p>
+                    </div>
+
+                    <div class="stat-card reveal">
+                        <div class="stat-icon"><i data-lucide="indian-rupee"></i></div>
+                        <span class="stat-num">₹<span class="counter" data-target="2500">0</span>Cr</span>
+                        <span class="stat-label">Locked Capital</span>
+                        <p style="font-size: 12px; margin-top: 10px; color: var(--text-light);">Capital trapped in security deposit disputes in Bangalore alone.</p>
+                        <p class="indian-impact">Source: JLL / Industry Benchmarks</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="showcase" id="features">
+            <div class="container">
+                <div style="text-align: center; margin-bottom: 60px;" class="reveal">
+                    <h2 style="font-size: 44px; margin-bottom: 20px;">Key Innovations</h2>
+                </div>
+                <div class="feature-grid">
+                    <div class="feature-card reveal">
+                        <div class="stat-icon" style="background: rgba(79, 70, 229, 0.1); margin-left: 0;"><i data-lucide="languages"></i></div>
+                        <h3 class="feature-title">AI Regionalization</h3>
+                        <p class="feature-text">We translate complex legal jargon into <b>Hindi, Marathi, Kannada, Tamil, Telugu, Malayalam, Bengali, and Gujarati</b> instantly, ensuring localized transparency for Bharat.</p>
+                    </div>
+
+                    <div class="feature-card reveal">
+                        <div class="stat-icon" style="background: rgba(6, 182, 212, 0.1); margin-left: 0;"><i data-lucide="scroll-text"></i></div>
+                        <h3 class="feature-title">AI Clause Architect</h3>
+                        <p class="feature-text">We use advanced LLMs to transform informal handshakes into structured, <b>Legally-Rigorous Clauses</b> that protect both owner and tenant rights.</p>
+                    </div>
+
+                    <div class="feature-card reveal">
+                        <div class="stat-icon" style="background: rgba(245, 158, 11, 0.1); margin-left: 0;"><i data-lucide="gavel"></i></div>
+                        <h3 class="feature-title">Dispute Resolution</h3>
+                        <p class="feature-text">Our engine proactively <b>Prevents and Settles Conflicts</b> by providing AI-verified transparency and immutable records for every maintenance and deposit claim.</p>
+                    </div>
+
+                    <div class="feature-card reveal">
+                        <div class="stat-icon" style="background: rgba(16, 185, 129, 0.1); margin-left: 0;"><i data-lucide="banknote"></i></div>
+                        <h3 class="feature-title">Blockchain-FinTech</h3>
+                        <p class="feature-text">We provide a secure, <b>Multi-Party Financial Layer</b> for rental deposits and payments, using blockchain to eliminate opaque deductions and middleman delays.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="showcase" id="impact">
+            <div class="container">
+                <div class="india-context reveal" style="margin-bottom: 30px; margin-top: 0; padding: 40px;">
+                    <div class="india-text">
+                        <h2 style="font-size: 28px; margin-bottom: 16px;">The Edge</h2>
+                        <p style="font-size: 16px; margin-bottom: 20px; opacity: 0.9;">We aren't just digitizing leases; we're re-engineering the rental trust economy for 800 million people.</p>
+                        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                            <span style="background: rgba(255,255,255,0.2); padding: 6px 12px; border-radius: 50px; font-weight: 700; font-size: 11px;">⚖️ 50/50 Trust Parity</span>
+                            <span style="background: rgba(255,255,255,0.2); padding: 6px 12px; border-radius: 50px; font-weight: 700; font-size: 11px;">⚡ 24H Onboarding</span>
+                        </div>
+                    </div>
+                    <div class="india-viz">
+                        <div style="margin-bottom: 16px;">
+                            <div style="display: flex; justify-content: space-between; font-weight: 800; font-size: 11px; margin-bottom: 6px; text-transform: uppercase;">
+                                <span>Onboarding Velocity</span>
+                                <span>10 Days → 24H</span>
+                            </div>
+                            <div style="height: 4px; background: rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden;">
+                                <div style="height: 100%; background: #FFF; width: 95%;"></div>
+                            </div>
+                        </div>
+                        <div style="margin-bottom: 0;">
+                            <div style="display: flex; justify-content: space-between; font-weight: 800; font-size: 11px; margin-bottom: 6px; text-transform: uppercase;">
+                                <span>Trust Parity Score</span>
+                                <span>50/50 Balanced</span>
+                            </div>
+                            <div style="height: 4px; background: rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden;">
+                                <div style="height: 100%; background: #FFF; width: 85%;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="text-align: center;" class="reveal">
+                    <h2 style="font-size: 28px; margin-bottom: 24px;">Impact & Results</h2>
+                    <div class="stats-grid" style="gap: 16px;">
+                        <div class="stat-card" style="border-top: 4px solid var(--primary); padding: 24px;">
+                            <div class="stat-icon" style="background: #EEF2FF; width: 40px; height: 40px; margin-bottom: 12px;"><i data-lucide="shield-check" size="20"></i></div>
+                            <h3 style="margin-bottom: 12px; font-size: 18px;">What We Do</h3>
+                            <p style="color: var(--text-light); font-size: 13px;">We eliminate the <b>Trust Deficit</b>. Over <b>1.1 Crore homes</b> stay vacant due to fear; we provide the immutable bridge.</p>
+                        </div>
+
+                        <div class="stat-card" style="border-top: 4px solid var(--accent); padding: 24px;">
+                            <div class="stat-icon" style="background: #ECFEFF; width: 40px; height: 40px; margin-bottom: 12px;"><i data-lucide="lightbulb" size="20"></i></div>
+                            <h3 style="margin-bottom: 12px; font-size: 18px;">How We Help</h3>
+                            <p style="color: var(--text-light); font-size: 13px;">AI translations in 8 languages and Blockchain ledgers resolve the <b>66% Litigation</b> burden.</p>
+                        </div>
+
+                        <div class="stat-card" style="border-top: 4px solid #10B981; padding: 24px;">
+                            <div class="stat-icon" style="background: #ECFDF5; width: 40px; height: 40px; margin-bottom: 12px;"><i data-lucide="trending-up" size="20"></i></div>
+                            <h3 style="margin-bottom: 12px; font-size: 18px;">Effect & Outcome</h3>
+                            <p style="color: var(--text-light); font-size: 13px;">A projected <b>85% reduction</b> in conflicts, unlocking <b>₹1.5 Lakh Crore</b> in housing value.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <footer>
+            <div class="container">
+                <img src="../assets/images/icon.png" alt="Tenant-Bridge Logo" style="width: 128px; height: 128px; border-radius: 20px; margin-bottom: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.1);">
+                <h2 style="font-size: 32px; margin-bottom: 20px;" class="reveal">TenantBridge</h2>
+                <p class="reveal">Harmonizing the Indian Rental Ecosystem. Built for 2026 and Beyond.</p>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        // Reveal Logic
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('active');
+                    if (entry.target.querySelector('.counter')) {
+                        const counters = entry.target.querySelectorAll('.counter');
+                        counters.forEach(animateCounter);
+                    }
+                    if (entry.target.querySelector('#progress')) {
+                        setTimeout(() => {
+                            entry.target.querySelector('#progress').style.width = '85%';
+                        }, 500);
+                    }
+                }
+            });
+        }, { threshold: 0.1 });
+
+        document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+        function animateCounter(el) {
+            const target = +el.getAttribute('data-target');
+            const duration = 2000;
+            const steps = 60;
+            const increment = target / steps;
+            let current = 0;
+            
+            const timer = setInterval(() => {
+                current += increment;
+                if (current >= target) {
+                    el.innerText = target % 1 === 0 ? target.toLocaleString() : target.toFixed(1);
+                    clearInterval(timer);
+                } else {
+                    el.innerText = target % 1 === 0 ? Math.floor(current).toLocaleString() : current.toFixed(1);
+                }
+            }, duration / steps);
+        }
+    </script>
+</body>
+</html>

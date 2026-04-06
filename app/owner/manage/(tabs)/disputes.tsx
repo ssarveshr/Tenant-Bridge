@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,14 +7,38 @@ import {
   TouchableOpacity,
   SafeAreaView,
   StatusBar,
+  RefreshControl,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { Colors, Spacing, Radius } from "../../../../constants/Theme";
+import { Colors, Spacing, Radius } from "../../../../constants/theme";
 import Animated, { FadeInDown } from "react-native-reanimated";
+import { useLocalSearchParams } from "expo-router";
+import { useDisputeStore, setActiveProcessingId } from "../../../../store/disputeStore";
 
 export default function OwnerManageDisputesScreen() {
   const router = useRouter();
+  const { id } = useLocalSearchParams();
+  const { disputes, fetchDisputes, isLoading } = useDisputeStore();
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchDisputes(id as string);
+    setRefreshing(false);
+  }, [id]);
+
+  useEffect(() => {
+    fetchDisputes(id as string);
+  }, [id]);
+  
+  const activeDisputes = disputes.filter(d => d.status === 'Pending');
+  const resolvedDisputes = disputes.filter(d => d.status === 'Resolved' || d.status === 'Escalated');
+
+  const handlePressDispute = (disputeId: string) => {
+    setActiveProcessingId(disputeId);
+    router.push({ pathname: "/owner/dispute-review", params: { id: disputeId } } as any);
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -24,33 +48,54 @@ export default function OwnerManageDisputesScreen() {
         <Text style={styles.headerTitle}>Unit Disputes</Text>
         <Text style={styles.headerSubtitle}>AI-mediated conflict resolution</Text>
       </View>
-
+ 
       <ScrollView 
-        showsVerticalScrollIndicator={false}
+        showsVerticalScrollIndicator={false} 
         contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.accent]} />
+        }
       >
         <Text style={styles.sectionTitle}>Requires Owner Action</Text>
-        <DisputeCard 
-          title="Sink Faucet Leakage"
-          status="Action Pending"
-          timestamp="4 hours ago"
-          category="Maintenance"
-          statusColor={Colors.warning}
-          index={0}
-          onPress={() => router.push("/dispute-verdict" as any)}
-        />
+        {activeDisputes.length === 0 ? (
+          <Text style={styles.emptyText}>No active disputes for this unit.</Text>
+        ) : (
+          activeDisputes.map((d, index) => (
+            <DisputeCard 
+              key={d.id}
+              title={d.title}
+              status={d.status}
+              timestamp={new Date(d.created_at).toLocaleDateString()}
+              category={d.category}
+              statusColor={Colors.warning}
+              index={index}
+              onPress={() => handlePressDispute(d.id)}
+            />
+          ))
+        )}
 
-        <Text style={styles.sectionTitle}>Archived Resolutions</Text>
-        <DisputeCard 
-          title="Late Fee Dispute"
-          status="Resolved (AI)"
-          timestamp="Feb 12, 2026"
-          category="Financial"
-          statusColor={Colors.success}
-          index={1}
-          resolved
-          onPress={() => router.push("/dispute-verdict" as any)}
-        />
+        {resolvedDisputes.length > 0 && (
+          <>
+            <Text style={[styles.sectionTitle, { marginTop: Spacing.xl }]}>Archived Resolutions</Text>
+            {resolvedDisputes.map((d, index) => (
+              <DisputeCard 
+                key={d.id}
+                title={d.title}
+                status={d.status}
+                timestamp={new Date(d.created_at).toLocaleDateString()}
+                category={d.category}
+                statusColor={d.status === 'Resolved' ? Colors.success : Colors.danger}
+                index={index}
+                resolved
+                onPress={() => handlePressDispute(d.id)}
+              />
+            ))}
+          </>
+        )}
+
+        {isLoading && !refreshing && (
+          <Text style={[styles.emptyText, { marginTop: 20 }]}>Updating disputes...</Text>
+        )}
 
         <View style={{ height: 100 }} />
       </ScrollView>
@@ -61,8 +106,8 @@ export default function OwnerManageDisputesScreen() {
 function DisputeCard({ title, status, timestamp, category, statusColor, index, resolved, onPress }: any) {
   return (
     <Animated.View entering={FadeInDown.delay(index * 100).duration(500)}>
-      <TouchableOpacity 
-        style={styles.card} 
+      <TouchableOpacity
+        style={styles.card}
         activeOpacity={0.8}
         onPress={onPress}
       >
@@ -179,4 +224,11 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: Colors.accent,
   },
+  emptyText: {
+    textAlign: 'center',
+    color: Colors.textSecondary,
+    marginTop: 40,
+    fontSize: 15,
+    fontStyle: 'italic',
+  }
 });

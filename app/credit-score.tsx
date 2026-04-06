@@ -10,11 +10,26 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { Colors, Spacing, Radius } from "../constants/Theme";
+import { Colors, Spacing, Radius } from "../constants/theme";
 import Animated, { FadeInUp, FadeIn } from "react-native-reanimated";
+import { useReputationStore } from "../store/reputationStore";
 
 export default function CreditScoreScreen() {
   const router = useRouter();
+  const { score, events, fetchReputation } = useReputationStore();
+
+  React.useEffect(() => {
+    fetchReputation();
+  }, []);
+
+  const getStatus = (score: number) => {
+    if (score >= 95) return { label: "Perfect", color: Colors.success, text: "Excellent Reputation" };
+    if (score >= 80) return { label: "Good", color: Colors.accent, text: "Good Reputation" };
+    if (score >= 60) return { label: "Fair", color: "#F59E0B", text: "Fair Reputation" };
+    return { label: "Poor", color: Colors.danger, text: "Poor Reputation" };
+  };
+
+  const status = getStatus(score);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -23,7 +38,7 @@ export default function CreditScoreScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
+          <Ionicons name="chevron-back" size={24} color={Colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Trust Score</Text>
         <TouchableOpacity>
@@ -40,14 +55,14 @@ export default function CreditScoreScreen() {
           entering={FadeInUp.delay(100).duration(600)}
           style={styles.scoreSection}
         >
-          <View style={styles.scoreCircle}>
-            <Text style={styles.scoreNumber}>100</Text>
-            <Text style={styles.scoreLabel}>Perfect</Text>
+          <View style={[styles.scoreCircle, { borderColor: `${status.color}20` }]}>
+            <Text style={styles.scoreNumber}>{score}</Text>
+            <Text style={[styles.scoreLabel, { color: status.color }]}>{status.label}</Text>
           </View>
-          <Text style={styles.reputationStatus}>Excellent Reputation</Text>
-          <View style={styles.verifiedBadge}>
+          <Text style={styles.reputationStatus}>{status.text}</Text>
+          <View style={[styles.verifiedBadge, { backgroundColor: status.color }]}>
             <Ionicons name="checkmark-circle" size={16} color={Colors.white} />
-            <Text style={styles.verifiedText}>Verified Tenant</Text>
+            <Text style={styles.verifiedText}>Verified User</Text>
           </View>
         </Animated.View>
 
@@ -55,7 +70,7 @@ export default function CreditScoreScreen() {
         <View style={styles.statsRow}>
           <StatBox label="Payments" value="100%" color={Colors.success} />
           <StatBox label="Disputes" value="0 Open" color={Colors.accent} />
-          <StatBox label="Leases" value="2" color={Colors.textSecondary} />
+          <StatBox label="Leases" value="Live" color={Colors.textSecondary} />
         </View>
 
         {/* Deduction History */}
@@ -64,27 +79,33 @@ export default function CreditScoreScreen() {
           entering={FadeInUp.delay(300).duration(500)}
           style={styles.historyCard}
         >
-          <View style={styles.historyItem}>
-            <View style={styles.historyIconBox}>
-              <Ionicons name="shield-checkmark" size={20} color={Colors.success} />
+          {events.length === 0 ? (
+            <View style={styles.historyItem}>
+               <Text style={styles.historyDesc}>No reputation events recorded yet.</Text>
             </View>
-            <View style={styles.historyContent}>
-              <Text style={styles.historyTitle}>Perfect Payment Streak</Text>
-              <Text style={styles.historyDesc}>12 consecutive on-time payments recorded.</Text>
-            </View>
-            <Text style={[styles.historyValue, { color: Colors.success }]}>+0</Text>
-          </View>
-          <View style={styles.historyDivider} />
-          <View style={styles.historyItem}>
-            <View style={styles.historyIconBox}>
-              <Ionicons name="document-text-outline" size={20} color={Colors.accent} />
-            </View>
-            <View style={styles.historyContent}>
-              <Text style={styles.historyTitle}>Agreement Compliance</Text>
-              <Text style={styles.historyDesc}>No lease terms were violated in the last 2 years.</Text>
-            </View>
-            <Text style={[styles.historyValue, { color: Colors.accent }]}>+0</Text>
-          </View>
+          ) : (
+            events.map((event: any, index: number) => (
+              <React.Fragment key={event.id}>
+                <View style={styles.historyItem}>
+                  <View style={styles.historyIconBox}>
+                    <Ionicons 
+                      name={event.amount > 0 ? "shield-checkmark" : "warning"} 
+                      size={20} 
+                      color={event.amount > 0 ? Colors.success : Colors.danger} 
+                    />
+                  </View>
+                  <View style={styles.historyContent}>
+                    <Text style={styles.historyTitle}>{event.reason}</Text>
+                    <Text style={styles.historyDesc}>{new Date(event.created_at).toLocaleDateString()}</Text>
+                  </View>
+                  <Text style={[styles.historyValue, { color: event.amount > 0 ? Colors.success : Colors.danger }]}>
+                    {event.amount > 0 ? `+${event.amount}` : event.amount}
+                  </Text>
+                </View>
+                {index < events.length - 1 && <View style={styles.historyDivider} />}
+              </React.Fragment>
+            ))
+          )}
         </Animated.View>
 
         {/* Benefits Section */}

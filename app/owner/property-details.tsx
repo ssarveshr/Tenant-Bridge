@@ -1,43 +1,49 @@
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import React from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
   ScrollView,
+  StyleSheet,
+  Text,
   TouchableOpacity,
   SafeAreaView,
   StatusBar,
-  Image,
+  Platform,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import { Colors, Spacing, Radius } from "../../constants/Theme";
+import { Colors, Spacing, Radius } from "../../constants/theme";
 import Animated, { FadeInUp, SlideInRight } from "react-native-reanimated";
+import { usePropertyStore } from "../../store/propertyStore";
+
+import { useLanguage } from "../../hooks/useLanguage";
 
 export default function PropertyDetailsScreen() {
   const router = useRouter();
+  const { id } = useLocalSearchParams();
+  const { t, n } = useLanguage();
+  
+  const property = usePropertyStore((state) => 
+    state.properties.find(p => p.id === id) || state.properties[0]
+  );
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
-      
+
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Property Details</Text>
+        <View style={{ width: 24 }} />
+        <Text style={styles.headerTitle}>{t('propertyDetails')}</Text>
         <TouchableOpacity>
           <Ionicons name="ellipsis-horizontal" size={24} color={Colors.textPrimary} />
         </TouchableOpacity>
       </View>
 
-      <ScrollView 
+      <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
         {/* Main Property Info Card */}
-        <Animated.View 
+        <Animated.View
           entering={FadeInUp.delay(100).duration(500)}
           style={styles.mainCard}
         >
@@ -45,27 +51,31 @@ export default function PropertyDetailsScreen() {
             <View style={styles.iconBox}>
               <Ionicons name="business-outline" size={32} color={Colors.accent} />
             </View>
-            <View style={styles.headerText}>
-              <Text style={styles.propertyName}>Sunshine Apartments</Text>
-              <Text style={styles.propertyUnit}>Unit: Flat 402 • Residential</Text>
+             <View style={styles.headerText}>
+              <Text style={styles.propertyName}>{property.name}</Text>
+              <View style={styles.idRow}>
+                <Text style={styles.idLabel}>Bridge ID: </Text>
+                <Text style={styles.idValue}>{property.id}</Text>
+              </View>
+              <Text style={styles.propertyUnit}>{t('unitNumber')}: {property.unit} • {t('residential')}</Text>
             </View>
           </View>
           <View style={styles.divider} />
           <View style={styles.statsRow}>
-            <View style={styles.statItem}>
-              <Text style={styles.statLabel}>Monthly Rent</Text>
-              <Text style={styles.statValue}>₹25,000</Text>
+             <View style={styles.statItem}>
+              <Text style={styles.statLabel}>{t('monthlyRent')}</Text>
+              <Text style={styles.statValue}>₹{n(parseInt(property.rent).toLocaleString())}</Text>
             </View>
             <View style={styles.statItem}>
-              <Text style={styles.statLabel}>Security Deposit</Text>
-              <Text style={styles.statValue}>₹75,000</Text>
+              <Text style={styles.statLabel}>{t('securityDeposit')}</Text>
+              <Text style={styles.statValue}>₹{n(parseInt(property.deposit).toLocaleString())}</Text>
             </View>
           </View>
         </Animated.View>
 
         {/* Current Tenant Section */}
-        <Text style={styles.sectionTitle}>Current Tenant</Text>
-        <Animated.View 
+        <Text style={styles.sectionTitle}>{t('tenant')}</Text>
+        <Animated.View
           entering={FadeInUp.delay(200).duration(500)}
           style={styles.tenantCard}
         >
@@ -73,55 +83,55 @@ export default function PropertyDetailsScreen() {
             <View style={styles.avatar}>
               <Ionicons name="person" size={24} color={Colors.accent} />
             </View>
-            <View style={styles.tenantInfo}>
-              <Text style={styles.tenantName}>John Doe</Text>
-              <Text style={styles.tenantMeta}>Lease active since Jan 2026</Text>
+             <View style={styles.tenantInfo}>
+              <Text style={styles.tenantName}>{property.tenantName}</Text>
+              <Text style={styles.tenantMeta}>{t('leaseActiveSince')} {n('Jan 2026')}</Text>
             </View>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.scoreBadge}
               onPress={() => router.push("/credit-score" as any)}
             >
-              <Text style={styles.scoreText}>100</Text>
+              <Text style={styles.scoreText}>{n(100)}</Text>
             </TouchableOpacity>
           </View>
           <View style={styles.actionRow}>
             <TouchableOpacity style={styles.actionBtn}>
               <Ionicons name="call-outline" size={20} color={Colors.accent} />
-              <Text style={styles.actionBtnText}>Call</Text>
+              <Text style={styles.actionBtnText}>{t('call')}</Text>
             </TouchableOpacity>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.actionBtn}
               onPress={() => router.push("/chat" as any)}
             >
               <Ionicons name="mail-outline" size={20} color={Colors.accent} />
-              <Text style={styles.actionBtnText}>Message</Text>
+              <Text style={styles.actionBtnText}>{t('message')}</Text>
             </TouchableOpacity>
           </View>
         </Animated.View>
 
         {/* Quick Links */}
         <View style={styles.linksContainer}>
-          <LinkItem 
-            icon="document-text-outline" 
-            label="Shared Agreement" 
-            delay={300} 
-            onPress={() => router.push("/owner/upload-agreement" as any)} 
+          <LinkItem
+            icon="document-text-outline"
+            label={t('sharedAgreement')}
+            delay={300}
+            onPress={() => router.push("/owner/upload-agreement" as any)}
           />
-          <LinkItem icon="alert-circle-outline" label="Property Disputes" count={1} delay={400} />
-          <LinkItem icon="hammer-outline" label="Maintenance Log" delay={500} />
+          <LinkItem icon="alert-circle-outline" label={t('disputes')} count={n(1)} delay={400} />
+          <LinkItem icon="hammer-outline" label={t('maintenanceLog')} delay={500} />
         </View>
 
         {/* Recent Transactions List */}
         <View style={styles.activityHeader}>
-          <Text style={styles.sectionTitle}>Rent History</Text>
+          <Text style={styles.sectionTitle}>{t('paymentHistory')}</Text>
           <TouchableOpacity>
-            <Text style={styles.viewAllBtn}>History</Text>
+            <Text style={styles.viewAllBtn}>{t('viewAll')}</Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.historyList}>
-          <HistoryItem month="March 2026" status="Verified" amount="₹25,000" date="Mar 5" delay={600} />
-          <HistoryItem month="February 2026" status="Verified" amount="₹25,000" date="Feb 5" delay={700} />
+          <HistoryItem month={n("March 2026")} status={t('verified') || "Verified"} amount={"₹" + n("25,000")} date={n("Mar 5")} delay={600} />
+          <HistoryItem month={n("February 2026")} status={t('verified') || "Verified"} amount={"₹" + n("25,000")} date={n("Feb 5")} delay={700} />
         </View>
 
         <View style={{ height: 100 }} />
@@ -129,7 +139,7 @@ export default function PropertyDetailsScreen() {
 
       {/* Primary Action Button */}
       <TouchableOpacity style={styles.primaryAction} activeOpacity={0.9}>
-        <Text style={styles.primaryActionText}>Collect Next Rent</Text>
+        <Text style={styles.primaryActionText}>{t('collectNextRent')}</Text>
         <Ionicons name="wallet-outline" size={20} color={Colors.white} style={{ marginLeft: 8 }} />
       </TouchableOpacity>
     </SafeAreaView>
@@ -259,6 +269,22 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "800",
     color: Colors.textPrimary,
+  },
+  idRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: 4,
+  },
+  idLabel: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: Colors.textSecondary,
+  },
+  idValue: {
+    fontSize: 12,
+    fontWeight: "900",
+    color: Colors.accent,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
   },
   sectionTitle: {
     fontSize: 18,

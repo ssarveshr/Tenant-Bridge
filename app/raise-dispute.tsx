@@ -10,15 +10,155 @@ import {
   StatusBar,
   KeyboardAvoidingView,
   Platform,
+  Image,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from "expo-router";
-import { Colors, Spacing, Radius } from "../constants/Theme";
-import Animated, { FadeInUp } from "react-native-reanimated";
+import { Colors, Spacing, Radius } from "../constants/theme";
+import Animated, { FadeInUp, FadeIn, Layout } from "react-native-reanimated";
+import { useLanguage } from "../hooks/useLanguage";
+import { addDispute, setActiveProcessingId } from "../store/disputeStore";
+import { usePropertyStore } from "../store/propertyStore";
+import { getDocumentAsync } from "expo-document-picker";
+import { supabase } from "../lib/supabase";
+import * as FileSystem from 'expo-file-system/legacy';
+import { decode } from 'base64-arraybuffer';
 
 export default function RaiseDisputeScreen() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [category, setCategory] = useState("Maintenance");
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [evidence, setEvidence] = useState<any[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async () => {
+    if (!title || !description) {
+      Alert.alert("Error", "Please provide a title and description");
+      return;
+    }
+
+    setIsSubmitting(true);
+    
+    // Use real lease data for the property_id
+    const myLease = usePropertyStore.getState().getMyLease();
+    if (!myLease) {
+      Alert.alert("Error", "No active lease found to link this dispute.");
+      setIsSubmitting(false);
+      return;
+    }
+
+    // Simulate Network latency
+    setTimeout(async () => {
+      try {
+        const newDispute = await addDispute({
+          title,
+          category,
+          description,
+          property_id: myLease.id,
+          owner_id: myLease.owner_id || '',
+          evidence_urls: evidence.map(e => e.publicUrl),
+        });
+        
+        // Set context for AI processing
+        setActiveProcessingId(newDispute.id);
+        
+        setIsSubmitting(false);
+        
+        // Navigate to processing screen
+        router.push({
+          pathname: "/ai-processing",
+          params: { 
+            description, 
+            category,
+            title
+          }
+        } as any);
+      } catch (err) {
+        setIsSubmitting(false);
+        Alert.alert("Error", "Failed to submit dispute. Please try again.");
+      }
+    }, 1500);
+  };
+
+  const uploadFileToSupabase = async (uri: string, name: string) => {
+    try {
+      // 1. Read file as Base64 (legacy import is more stable for this)
+      const base64 = await FileSystem.readAsStringAsync(uri, {
+        encoding: "base64",
+      });
+
+      // 2. Decode to ArrayBuffer (Supabase handles this perfectly)
+      const arrayBuffer = decode(base64);
+      
+      const fileExt = name.split('.').pop();
+      const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`;
+      const filePath = `disputes/${fileName}`;
+
+      // 3. Upload the binary ArrayBuffer
+      const { data, error } = await supabase.storage
+        .from('dispute-evidence')
+        .upload(filePath, arrayBuffer, {
+          contentType: name.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'image/jpeg',
+          upsert: false
+        });
+
+      if (error) throw error;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('dispute-evidence')
+        .getPublicUrl(filePath);
+
+      return { publicUrl, filePath, name };
+    } catch (error: any) {
+      console.error("Upload error:", error);
+      Alert.alert("Upload Failed", error.message || "Error uploading file");
+      return null;
+    }
+  };
+
+  const handlePickEvidence = async () => {
+    try {
+      const result = await getDocumentAsync({
+        type: ["image/*", "video/*", "application/pdf"],
+        multiple: true,
+        copyToCacheDirectory: true,
+      });
+
+      if (!result.canceled) {
+        setIsUploading(true);
+        const uploadedFiles = [];
+        
+        for (const asset of result.assets) {
+          const uploaded = await uploadFileToSupabase(asset.uri, asset.name);
+          if (uploaded) {
+            uploadedFiles.push({
+              ...uploaded,
+              size: asset.size
+            });
+          }
+        }
+        
+        setEvidence([...evidence, ...uploadedFiles]);
+        setIsUploading(false);
+      }
+    } catch (err: any) {
+      console.error("Picker error:", err);
+      setIsUploading(false);
+    }
+  };
+
+  const removeEvidence = (index: number) => {
+    const newEvidence = [...evidence];
+    newEvidence.splice(index, 1);
+    setEvidence(newEvidence);
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -26,9 +166,9 @@ export default function RaiseDisputeScreen() {
       
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="close" size={28} color={Colors.textPrimary} />
+          <Ionicons name="chevron-back" size={24} color={Colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Raise New Dispute</Text>
+        <Text style={styles.headerTitle}>{t('raiseDispute')}</Text>
         <View style={{ width: 28 }} />
       </View>
 
@@ -41,7 +181,7 @@ export default function RaiseDisputeScreen() {
           contentContainerStyle={styles.scrollContent}
         >
           <Animated.View entering={FadeInUp.duration(500)}>
-            <Text style={styles.label}>Select Category</Text>
+            <Text style={styles.label}>{t('selectLanguage')}</Text>
             <View style={styles.categoryRow}>
               <CategoryOption 
                 label="Maintenance" 
@@ -65,6 +205,8 @@ export default function RaiseDisputeScreen() {
               style={styles.input}
               placeholder="Brief summary of the issue"
               placeholderTextColor={Colors.textSecondary}
+              value={title}
+              onChangeText={setTitle}
             />
 
             <Text style={styles.label}>Detailed Description</Text>
@@ -74,12 +216,52 @@ export default function RaiseDisputeScreen() {
               placeholderTextColor={Colors.textSecondary}
               multiline
               numberOfLines={4}
+              value={description}
+              onChangeText={setDescription}
             />
 
-            <TouchableOpacity style={styles.uploadBtn}>
-              <Ionicons name="camera-outline" size={24} color={Colors.accent} />
-              <Text style={styles.uploadBtnText}>Upload Evidence (Photos/Videos)</Text>
+            <TouchableOpacity 
+              style={[styles.uploadBtn, isUploading && styles.uploadBtnDisabled]} 
+              onPress={handlePickEvidence}
+              disabled={isUploading}
+            >
+              {isUploading ? (
+                <ActivityIndicator color={Colors.accent} size="small" />
+              ) : (
+                <Ionicons name="camera-outline" size={24} color={Colors.accent} />
+              )}
+              <Text style={styles.uploadBtnText}>
+                {isUploading ? "Uploading Evidence..." : "Upload Evidence (Photos/Videos/PDF)"}
+              </Text>
             </TouchableOpacity>
+
+            {/* Evidence List */}
+            {evidence.length > 0 && (
+              <View style={styles.evidenceList}>
+                {evidence.map((item, index) => (
+                  <Animated.View 
+                    key={index} 
+                    entering={FadeIn} 
+                    layout={Layout.springify()}
+                    style={styles.evidenceItem}
+                  >
+                    <View style={styles.evidenceLeft}>
+                      <Ionicons 
+                        name={item.name.toLowerCase().endsWith('.pdf') ? "document" : "image"} 
+                        size={20} 
+                        color={Colors.textSecondary} 
+                      />
+                      <Text style={styles.evidenceName} numberOfLines={1}>
+                        {item.name}
+                      </Text>
+                    </View>
+                    <TouchableOpacity onPress={() => removeEvidence(index)}>
+                      <Ionicons name="close-circle" size={20} color="#FF4D4D" />
+                    </TouchableOpacity>
+                  </Animated.View>
+                ))}
+              </View>
+            )}
 
             <View style={styles.aiNotice}>
               <Ionicons name="sparkles-outline" size={20} color={Colors.accent} />
@@ -89,10 +271,15 @@ export default function RaiseDisputeScreen() {
             </View>
 
             <TouchableOpacity 
-              style={styles.primaryBtn}
-              onPress={() => router.back()}
+              style={[styles.primaryBtn, isSubmitting && styles.primaryBtnDisabled]}
+              onPress={handleSubmit}
+              disabled={isSubmitting}
             >
-              <Text style={styles.primaryBtnText}>Submit for AI Review</Text>
+              {isSubmitting ? (
+                <ActivityIndicator color={Colors.white} />
+              ) : (
+                <Text style={styles.primaryBtnText}>Submit for AI Review</Text>
+              )}
             </TouchableOpacity>
           </Animated.View>
 
@@ -206,6 +393,24 @@ const styles = StyleSheet.create({
     color: Colors.accent,
     marginTop: 8,
   },
+  imagePreviewContainer: {
+    marginTop: 24,
+    position: "relative",
+    borderRadius: Radius.m,
+    overflow: "hidden",
+  },
+  imagePreview: {
+    width: "100%",
+    height: 150,
+    borderRadius: Radius.m,
+  },
+  removeImageBtn: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    backgroundColor: "rgba(255,255,255,0.8)",
+    borderRadius: 12,
+  },
   aiNotice: {
     flexDirection: "row",
     backgroundColor: "#F8FAFC",
@@ -239,5 +444,34 @@ const styles = StyleSheet.create({
     color: Colors.white,
     fontSize: 16,
     fontWeight: "bold",
+  },
+  uploadBtnDisabled: {
+    opacity: 0.7,
+  },
+  evidenceList: {
+    marginTop: 16,
+    gap: 8,
+  },
+  evidenceItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: Colors.white,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  evidenceLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+    marginRight: 12,
+  },
+  evidenceName: {
+    fontSize: 14,
+    color: Colors.textPrimary,
+    marginLeft: 8,
+    fontWeight: "600",
   },
 });

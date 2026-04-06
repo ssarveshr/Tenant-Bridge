@@ -1,26 +1,62 @@
-import React from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  SafeAreaView,
-  StatusBar,
-} from "react-native";
-import { useRouter } from "expo-router";
-import { Colors, Spacing, Radius } from "../constants/Theme";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import React, { useState } from "react";
+import {
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, { FadeInUp } from "react-native-reanimated";
+import { supabase } from "../lib/supabase";
+import { Colors, Radius, Spacing } from "../constants/theme";
+import { useLanguage } from "../hooks/useLanguage";
 
 export default function RoleSelection() {
   const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
+  const { t } = useLanguage();
 
-  const handleRoleSelect = (role: string) => {
-    // Navigate to respective dashboard flow
-    if (role === "tenant") {
-      router.push("/(tabs)/home" as any);
-    } else {
-      router.push("/owner/home" as any);
+  const handleRoleSelect = async (role: "tenant" | "owner") => {
+    setIsLoading(true);
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (!user) {
+        Alert.alert("Error", "You must be logged in to select a role.");
+        setIsLoading(false);
+        return;
+      }
+
+      const updateData = role === "tenant"
+        ? { is_tenant: true }
+        : { is_owner: true };
+
+      const { error } = await supabase
+        .from("users")
+        .update(updateData)
+        .eq("id", user.id);
+
+      if (error) {
+        console.error("Error updating role:", error);
+        Alert.alert("Error", "Could not update your role. Please try again.");
+        setIsLoading(false);
+        return;
+      }
+
+      // Navigate to respective dashboard flow
+      if (role === "tenant") {
+        router.push("/(tabs)/home" as any);
+      } else {
+        router.push("/owner/home" as any);
+      }
+    } catch (error: any) {
+      Alert.alert("Unexpected Error", error.message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -28,33 +64,33 @@ export default function RoleSelection() {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
       <View style={styles.content}>
-        <Animated.View 
-          entering={FadeInUp.delay(100).duration(500)} 
+        <Animated.View
+          entering={FadeInUp.delay(100).duration(500)}
           style={styles.header}
         >
-          <Text style={styles.title}>Choose your role</Text>
-          <Text style={styles.subtitle}>Our platform adapts based on who you are.</Text>
+          <Text style={styles.title}>{t('chooseRole')}</Text>
+          <Text style={styles.subtitle}>{t('platformAdapts')}</Text>
         </Animated.View>
 
         <View style={styles.roleGrid}>
-          <RoleCard 
-            icon="person-outline" 
-            title="Tenant" 
-            desc="Move in, pay rent, resolve disputes, and track agreements."
+          <RoleCard
+            icon="person-outline"
+            title={t('tenant')}
+            desc={t('tenantMode')}
             onPress={() => handleRoleSelect("tenant")}
             delay={200}
           />
-          <RoleCard 
-            icon="home-outline" 
-            title="House Owner" 
-            desc="Manage properties, verify payments, and handle tenant issues."
+          <RoleCard
+            icon="home-outline"
+            title={t('houseOwner')}
+            desc={t('ownerMode')}
             onPress={() => handleRoleSelect("owner")}
             delay={300}
           />
         </View>
 
         <Text style={styles.footerNote}>
-          This setting can be changed later in your profile.
+          {t('settingChangeNote')}
         </Text>
       </View>
     </SafeAreaView>
@@ -64,8 +100,8 @@ export default function RoleSelection() {
 function RoleCard({ icon, title, desc, onPress, delay }: any) {
   return (
     <Animated.View entering={FadeInUp.delay(delay).duration(600)}>
-      <TouchableOpacity 
-        style={styles.card} 
+      <TouchableOpacity
+        style={styles.card}
         onPress={onPress}
         activeOpacity={0.7}
       >
@@ -94,6 +130,17 @@ const styles = StyleSheet.create({
   },
   header: {
     marginBottom: Spacing.xxl,
+  },
+  backBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: Colors.white,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: Colors.border,
+    marginBottom: 20,
   },
   title: {
     fontSize: 28,
@@ -153,5 +200,16 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: Colors.textSecondary,
     opacity: 0.7,
+  },
+  loadingContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    padding: Spacing.xl,
+    gap: Spacing.m,
+  },
+  loadingText: {
+    color: Colors.textSecondary,
+    fontSize: 16,
+    fontWeight: "600",
   },
 });

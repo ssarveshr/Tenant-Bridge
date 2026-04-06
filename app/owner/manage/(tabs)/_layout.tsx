@@ -1,7 +1,7 @@
 import React from "react";
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { Colors } from "../../../../constants/Theme";
+import { Colors } from "../../../../constants/theme";
 
 export default function OwnerManageLayout() {
   return (
@@ -54,7 +54,7 @@ export default function OwnerManageLayout() {
       <Tabs.Screen
         name="agreement"
         options={{
-          title: "Workspace",
+          title: "Agreement",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="document-text" size={size} color={color} />
           ),

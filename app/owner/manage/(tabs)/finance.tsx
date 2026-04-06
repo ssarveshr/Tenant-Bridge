@@ -10,11 +10,20 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { Colors, Spacing, Radius } from "../../../../constants/Theme";
+import { Colors, Spacing, Radius } from "../../../../constants/theme";
 import Animated, { FadeInDown } from "react-native-reanimated";
+import { useLocalSearchParams } from "expo-router";
+import { usePropertyStore } from "../../../../store/propertyStore";
 
 export default function OwnerManageFinanceScreen() {
   const router = useRouter();
+  const { id } = useLocalSearchParams();
+  const property = usePropertyStore((state) => 
+    state.properties.find(p => p.id === id) || state.properties[0]
+  );
+
+  const rentAmount = parseInt(property.rent).toLocaleString();
+  const depositAmount = parseInt(property.deposit).toLocaleString();
 
   return (
     <SafeAreaView style={styles.container}>
@@ -29,29 +38,13 @@ export default function OwnerManageFinanceScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        <Text style={styles.sectionTitle}>Verification Needed</Text>
-        <Animated.View entering={FadeInDown.duration(500)} style={styles.attentionCard}>
-          <View style={styles.iconBox}>
-            <Ionicons name="camera-outline" size={24} color={Colors.warning} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.attTitle}>Offline Receipt Uploaded</Text>
-            <Text style={styles.attDesc}>Verify March Rent from John Doe</Text>
-          </View>
-          <TouchableOpacity 
-            style={styles.verifyBtn}
-            onPress={() => router.push("/owner/verify-payment" as any)}
-          >
-            <Text style={styles.verifyText}>Verify</Text>
-          </TouchableOpacity>
-        </Animated.View>
 
         <Text style={styles.sectionTitle}>Unit History</Text>
         <View style={styles.list}>
           <HistoryCard 
             title="House Rent - February 2026"
             date="Feb 5, 2026"
-            amount="₹25,000"
+            amount={`₹${rentAmount}`}
             method="Razorpay (Online)"
             status="Success"
             index={0}
@@ -59,7 +52,7 @@ export default function OwnerManageFinanceScreen() {
           <HistoryCard 
             title="Security Deposit"
             date="Jan 1, 2026"
-            amount="₹75,000"
+            amount={`₹${depositAmount}`}
             method="Cash (Verified)"
             status="Success"
             index={1}
@@ -76,7 +69,7 @@ export default function OwnerManageFinanceScreen() {
         onPress={() => console.log("Ledger PDF Exported")}
       >
         <Ionicons name="download-outline" size={24} color={Colors.white} />
-        <Text style={styles.fabText}>Export Ledger</Text>
+        <Text style={styles.fabText}>Export Transaction Details</Text>
       </TouchableOpacity>
     </SafeAreaView>
   );
@@ -89,7 +82,7 @@ function HistoryCard({ title, date, amount, method, status, index }: any) {
         <View style={styles.cardTop}>
           <View style={styles.details}>
             <Text style={styles.titleText}>{title}</Text>
-            <Text style={styles.dateText}>{date} • {method}</Text>
+            <Text style={styles.dateText}>{date}</Text>
           </View>
           <Text style={styles.amountText}>{amount}</Text>
         </View>

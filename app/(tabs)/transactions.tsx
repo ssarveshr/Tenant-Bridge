@@ -8,12 +8,51 @@ import {
   TouchableOpacity,
   SafeAreaView,
   StatusBar,
+  ActivityIndicator,
+  RefreshControl
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { Colors, Spacing, Radius } from "../../constants/Theme";
+import { Colors, Spacing, Radius } from "../../constants/theme";
 import Animated, { FadeInDown } from "react-native-reanimated";
+import { useTransactionStore } from "../../store/transactionStore";
+import { useLanguage } from "../../hooks/useLanguage";
 
 export default function TransactionsScreen() {
+  const { transactions, fetchTransactions, isLoading } = useTransactionStore();
+  const { n, language } = useLanguage();
+
+  React.useEffect(() => {
+    fetchTransactions();
+  }, []);
+
+  const onRefresh = () => {
+    fetchTransactions();
+  };
+
+  const formatDate = (dateStr: string) => {
+    try {
+      const date = new Date(dateStr);
+      return new Intl.DateTimeFormat(language === 'en' ? 'en-US' : language, {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric'
+      }).format(date);
+    } catch {
+      return dateStr;
+    }
+  };
+
+  if (isLoading && transactions.length === 0) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={Colors.accent} />
+          <Text style={styles.loadingText}>Fetching transaction history...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
@@ -26,32 +65,30 @@ export default function TransactionsScreen() {
       <ScrollView 
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl refreshing={isLoading} onRefresh={onRefresh} tintColor={Colors.accent} />
+        }
       >
         <View style={styles.list}>
-          <TransactionCard 
-            title="House Rent - April 2026"
-            date="Apr 1, 2026"
-            amount="₹25,000"
-            method="Razorpay (Online)"
-            hash="0x71C...3a4d"
-            index={0}
-          />
-          <TransactionCard 
-            title="House Rent - March 2026"
-            date="Mar 3, 2026"
-            amount="₹25,000"
-            method="Cash (Offline)"
-            hash="0xa52...8b1e"
-            index={1}
-          />
-          <TransactionCard 
-            title="Security Deposit"
-            date="Feb 28, 2026"
-            amount="₹75,000"
-            method="Razorpay (Online)"
-            hash="0x9f1...2c90"
-            index={2}
-          />
+          {transactions.length > 0 ? (
+            transactions.map((tx, idx) => (
+              <TransactionCard 
+                key={tx.id}
+                title={`${tx.category || 'Rent Payment'} - ${formatDate(tx.created_at)}`}
+                date={formatDate(tx.created_at)}
+                amount={`₹${n(tx.amount.toLocaleString())}`}
+                method={tx.method || "Razorpay"}
+                hash={tx.blockchain_hash || "Securing on Polygon..."}
+                index={idx}
+              />
+            ))
+          ) : (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="receipt-outline" size={64} color={Colors.border} />
+              <Text style={styles.emptyTitle}>No Transactions Yet</Text>
+              <Text style={styles.emptySubtitle}>Your immutable payment history will appear here once you pay rent.</Text>
+            </View>
+          )}
         </View>
 
         <View style={{ height: 100 }} />
@@ -70,7 +107,7 @@ function TransactionCard({ title, date, amount, method, hash, index }: any) {
           </View>
           <View style={styles.details}>
             <Text style={styles.titleText}>{title}</Text>
-            <Text style={styles.dateText}>{date} • {method}</Text>
+            <Text style={styles.dateText}>{date}</Text>
           </View>
           <Text style={styles.amountText}>{amount}</Text>
         </View>
@@ -181,4 +218,42 @@ const styles = StyleSheet.create({
     fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
     marginLeft: 6,
   },
+  cardValue: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: Colors.textPrimary,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: Colors.white,
+    padding: 40,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: Colors.textSecondary,
+    fontWeight: "600",
+    marginTop: 20,
+  },
+  emptyContainer: {
+    padding: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 40,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: Colors.textPrimary,
+    marginTop: 20,
+    marginBottom: 8,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    textAlign: "center",
+    lineHeight: 20,
+    paddingHorizontal: 20,
+  }
 });
